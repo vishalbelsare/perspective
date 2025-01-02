@@ -1,153 +1,71 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use super::color_range_selector::*;
-use super::containers::radio_list::RadioList;
-use super::modal::*;
-use crate::utils::WeakScope;
-use crate::*;
-
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::str::FromStr;
-use wasm_bindgen::*;
-use web_sys::*;
 use yew::prelude::*;
 use yew::*;
 
-pub static CSS: &str = include_str!("../../../build/css/column-style.css");
+use super::form::color_range_selector::*;
+use super::form::number_field::NumberFieldProps;
+use super::modal::*;
+use super::style::LocalStyle;
+use crate::components::form::number_field::NumberField;
+use crate::components::form::select_field::SelectEnumField;
+use crate::config::*;
+use crate::session::Session;
+use crate::utils::WeakScope;
+use crate::*;
 
-#[derive(PartialEq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum NumberColorMode {
-    #[serde(rename = "disabled")]
-    Disabled,
-
-    #[serde(rename = "foreground")]
-    Foreground,
-
-    #[serde(rename = "background")]
-    Background,
-
-    #[serde(rename = "gradient")]
-    Gradient,
-
-    #[serde(rename = "bar")]
-    Bar,
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum Side {
+    Fg,
+    Bg,
 }
 
-impl Default for NumberColorMode {
-    fn default() -> Self {
-        NumberColorMode::Foreground
-    }
-}
+use Side::*;
 
-impl Display for NumberColorMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let text = match self {
-            Self::Foreground => Ok("foreground"),
-            Self::Background => Ok("background"),
-            Self::Gradient => Ok("gradient"),
-            Self::Bar => Ok("bar"),
-            _ => Err(std::fmt::Error),
-        }?;
-
-        write!(f, "{}", text)
-    }
-}
-
-impl FromStr for NumberColorMode {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "foreground" => Ok(Self::Foreground),
-            "background" => Ok(Self::Background),
-            "gradient" => Ok(Self::Gradient),
-            "bar" => Ok(Self::Bar),
-            x => Err(format!("Unknown NumberColorMode::{}", x)),
-        }
-    }
-}
-
-impl NumberColorMode {
-    fn is_foreground(&self) -> bool {
-        *self == Self::Foreground
-    }
-
-    fn is_enabled(&self) -> bool {
-        *self != Self::Disabled
-    }
-
-    fn needs_gradient(&self) -> bool {
-        *self == Self::Gradient || *self == Self::Bar
-    }
-}
-
-#[cfg_attr(test, derive(Debug))]
-#[derive(Serialize, Deserialize, Clone, Default)]
-pub struct NumberColumnStyleConfig {
-    #[serde(default = "NumberColorMode::default")]
-    #[serde(skip_serializing_if = "NumberColorMode::is_foreground")]
-    pub number_color_mode: NumberColorMode,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fixed: Option<u32>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_color: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub neg_color: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gradient: Option<f64>,
-}
-
-/// Exactly like a `ColumnStyleConfig`, except without `Option<>` fields, as
-/// this struct represents the default values we should use in the GUI when they
-/// are `None` in the real config.  It is also used to decide when to omit a
-/// field when serialized a `ColumnStyleConfig` to JSON.
-#[derive(Deserialize, Clone, Default, Debug)]
-pub struct NumberColumnStyleDefaultConfig {
-    pub gradient: f64,
-    pub fixed: u32,
-    pub pos_color: String,
-    pub neg_color: String,
-
-    #[serde(default = "NumberColorMode::default")]
-    pub color_mode: NumberColorMode,
-}
-
+#[derive(Debug)]
 pub enum NumberColumnStyleMsg {
-    Reset(NumberColumnStyleConfig, NumberColumnStyleDefaultConfig),
-    FixedChanged(String),
-    ColorEnabledChanged(bool),
-    PosColorChanged(String),
-    NegColorChanged(String),
-    NumberColorModeChanged(NumberColorMode),
-    GradientChanged(String),
+    PosColorChanged(Side, String),
+    NegColorChanged(Side, String),
+    NumberForeModeChanged(NumberForegroundMode),
+    NumberBackModeChanged(NumberBackgroundMode),
+    GradientChanged(Side, Option<f64>),
+    DefaultGradientChanged(f64),
 }
 
 /// A `ColumnStyle` component is mounted to the window anchored at the screen
-/// position of `elem`.  It needs two input configs, the current configuration
-/// object and a default version without `Option<>`
+/// position of `elem`.
+///
+/// It needs two input configs, the current configuration object and a default
+/// version without `Option<>`
 #[derive(Properties)]
 pub struct NumberColumnStyleProps {
-    #[prop_or_default]
-    pub config: NumberColumnStyleConfig,
+    #[cfg_attr(test, prop_or_default)]
+    pub config: Option<NumberColumnStyleConfig>,
 
-    #[prop_or_default]
+    #[cfg_attr(test, prop_or_default)]
     pub default_config: NumberColumnStyleDefaultConfig,
 
     #[prop_or_default]
-    pub on_change: Callback<NumberColumnStyleConfig>,
+    pub on_change: Callback<ColumnConfigValueUpdate>,
 
     #[prop_or_default]
     pub weak_link: WeakScope<NumberColumnStyle>,
+
+    #[prop_or_default]
+    pub session: Option<Session>,
+
+    #[prop_or_default]
+    pub column_name: Option<String>,
 }
 
 impl ModalLink<NumberColumnStyle> for NumberColumnStyleProps {
@@ -162,17 +80,37 @@ impl PartialEq for NumberColumnStyleProps {
     }
 }
 
-impl NumberColumnStyleProps {}
+impl NumberColumnStyleProps {
+    fn set_default_gradient(&self, ctx: &Context<NumberColumnStyle>) {
+        if let Some(session) = self.session.clone()
+            && let Some(column_name) = self.column_name.clone()
+        {
+            ctx.link().send_future(async move {
+                let view = session.get_view().unwrap();
+                let min_max = view.get_min_max(column_name).await.unwrap();
+                let abs_max = max!(
+                    min_max.0.parse::<f64>().unwrap().abs(),
+                    min_max.1.parse::<f64>().unwrap().abs()
+                );
+                let gradient = (abs_max * 100.).round() / 100.;
+                NumberColumnStyleMsg::DefaultGradientChanged(gradient)
+            });
+        }
+    }
+}
 
-/// The `ColumnStyle` component stores its UI state privately in its own struct,
-/// rather than its props (which has two version of this data itself, the
-/// JSON serializable config record and the defaults record).
+/// A column style form control for `number` columns.
 pub struct NumberColumnStyle {
     config: NumberColumnStyleConfig,
-    color_mode: NumberColorMode,
-    pos_color: String,
-    neg_color: String,
-    gradient: f64,
+    default_config: NumberColumnStyleDefaultConfig,
+    fg_mode: NumberForegroundMode,
+    bg_mode: NumberBackgroundMode,
+    pos_fg_color: String,
+    neg_fg_color: String,
+    pos_bg_color: String,
+    neg_bg_color: String,
+    fg_gradient: Option<f64>,
+    bg_gradient: Option<f64>,
 }
 
 impl Component for NumberColumnStyle {
@@ -181,373 +119,372 @@ impl Component for NumberColumnStyle {
 
     fn create(ctx: &Context<Self>) -> Self {
         ctx.set_modal_link();
-        NumberColumnStyle::reset(&ctx.props().config, &ctx.props().default_config)
+        ctx.props().set_default_gradient(ctx);
+        Self::reset(
+            &ctx.props().config.clone().unwrap_or_default(),
+            &ctx.props().default_config.clone(),
+        )
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        let mut new = NumberColumnStyle::reset(&ctx.props().config, &ctx.props().default_config);
+    fn changed(&mut self, ctx: &Context<Self>, _old: &Self::Properties) -> bool {
+        let mut new = Self::reset(
+            &ctx.props().config.clone().unwrap_or_default(),
+            &ctx.props().default_config.clone(),
+        );
+        ctx.props().set_default_gradient(ctx);
         std::mem::swap(self, &mut new);
         true
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            NumberColumnStyleMsg::Reset(config, default_config) => {
-                let mut new = NumberColumnStyle::reset(&config, &default_config);
-                std::mem::swap(self, &mut new);
-                true
-            }
-            NumberColumnStyleMsg::FixedChanged(fixed) => {
-                let fixed = match fixed.parse::<u32>() {
-                    Ok(x) if x != ctx.props().default_config.fixed => Some(x),
-                    Ok(_) => None,
-                    Err(_) if fixed.is_empty() => Some(0),
-                    Err(_) => None,
-                };
+            // NumberColumnStyleMsg::Reset(config, default_config) => {
+            //     let mut new = Self::reset(&config, &default_config);
+            //     std::mem::swap(self, &mut new);
+            //     true
+            // },
+            // NumberColumnStyleMsg::ForeEnabledChanged(val) => {
+            //     if val {
+            //         let color_mode = match self.fg_mode {
+            //             NumberForegroundMode::Disabled => NumberForegroundMode::default(),
+            //             x => x,
+            //         };
 
-                self.config.fixed = fixed.map(|x| std::cmp::min(15, x));
-                self.dispatch_config(ctx);
-                true
-            }
-            NumberColumnStyleMsg::ColorEnabledChanged(val) => {
-                if val {
-                    let color_mode = match self.color_mode {
-                        NumberColorMode::Disabled => NumberColorMode::default(),
-                        x => x,
-                    };
+            //         self.config.number_fg_mode = color_mode;
+            //         self.config.pos_fg_color = Some(self.pos_fg_color.to_owned());
+            //         self.config.neg_fg_color = Some(self.neg_fg_color.to_owned());
+            //         if self.fg_mode.needs_gradient() {
+            //             self.config.fg_gradient = Some(self.fg_gradient.unwrap());
+            //         } else {
+            //             self.config.fg_gradient = None;
+            //         }
+            //     } else {
+            //         self.config.number_fg_mode = NumberForegroundMode::Disabled;
+            //         self.config.pos_fg_color = None;
+            //         self.config.neg_fg_color = None;
+            //         self.config.fg_gradient = None;
+            //     }
 
-                    self.config.number_color_mode = color_mode;
-                    self.config.pos_color = Some(self.pos_color.to_owned());
-                    self.config.neg_color = Some(self.neg_color.to_owned());
-                    if self.color_mode.needs_gradient() {
-                        self.config.gradient = Some(self.gradient);
-                    } else {
-                        self.config.gradient = None;
-                    }
+            //     self.dispatch_config(ctx);
+            //     true
+            // },
+            // NumberColumnStyleMsg::BackEnabledChanged(val) => {
+            //     if val {
+            //         let color_mode = match self.bg_mode {
+            //             NumberBackgroundMode::Disabled => NumberBackgroundMode::Color,
+            //             x => x,
+            //         };
+
+            //         self.config.number_bg_mode = color_mode;
+            //         self.config.pos_bg_color = Some(self.pos_bg_color.to_owned());
+            //         self.config.neg_bg_color = Some(self.neg_bg_color.to_owned());
+            //         if self.bg_mode.needs_gradient() {
+            //             self.config.bg_gradient = Some(self.bg_gradient.unwrap());
+            //         } else {
+            //             self.config.bg_gradient = None;
+            //         }
+            //     } else {
+            //         self.config.number_bg_mode = NumberBackgroundMode::Disabled;
+            //         self.config.pos_bg_color = None;
+            //         self.config.neg_bg_color = None;
+            //         self.config.bg_gradient = None;
+            //     }
+
+            //     self.dispatch_config(ctx);
+            //     true
+            // },
+            NumberColumnStyleMsg::PosColorChanged(side, val) => {
+                if side == Fg {
+                    self.pos_fg_color = val;
+                    self.config.pos_fg_color = Some(self.pos_fg_color.to_owned());
                 } else {
-                    self.config.number_color_mode = NumberColorMode::Disabled;
-                    self.config.pos_color = None;
-                    self.config.neg_color = None;
-                    self.config.gradient = None;
+                    self.pos_bg_color = val;
+                    self.config.pos_bg_color = Some(self.pos_bg_color.to_owned());
                 }
 
                 self.dispatch_config(ctx);
                 true
-            }
-            NumberColumnStyleMsg::PosColorChanged(val) => {
-                self.pos_color = val;
-                self.config.pos_color = Some(self.pos_color.to_owned());
-                self.dispatch_config(ctx);
-                false
-            }
-            NumberColumnStyleMsg::NegColorChanged(val) => {
-                self.neg_color = val;
-                self.config.neg_color = Some(self.neg_color.to_owned());
-                self.dispatch_config(ctx);
-                false
-            }
-            NumberColumnStyleMsg::NumberColorModeChanged(val) => {
-                self.color_mode = val;
-                self.config.number_color_mode = val;
-                if self.color_mode.needs_gradient() {
-                    self.config.gradient = Some(self.gradient);
+            },
+            NumberColumnStyleMsg::NegColorChanged(side, val) => {
+                if side == Fg {
+                    self.neg_fg_color = val;
+                    self.config.neg_fg_color = Some(self.neg_fg_color.to_owned());
                 } else {
-                    self.config.gradient = None;
+                    self.neg_bg_color = val;
+                    self.config.neg_bg_color = Some(self.neg_bg_color.to_owned());
                 }
 
                 self.dispatch_config(ctx);
                 true
-            }
-            NumberColumnStyleMsg::GradientChanged(gradient) => {
-                self.config.gradient = match gradient.parse::<f64>() {
-                    Ok(x) => {
-                        self.gradient = x;
-                        Some(x)
-                    }
-                    Err(_) if gradient.is_empty() => {
-                        self.gradient = ctx.props().default_config.gradient;
-                        Some(ctx.props().default_config.gradient)
-                    }
-                    Err(_) => {
-                        self.gradient = ctx.props().default_config.gradient;
-                        None
-                    }
+            },
+            NumberColumnStyleMsg::NumberForeModeChanged(val) => {
+                self.fg_mode = val;
+                self.config.number_fg_mode = val;
+                if self.fg_mode.needs_gradient() {
+                    self.config.fg_gradient = Some(self.fg_gradient.unwrap());
+                } else {
+                    self.config.fg_gradient = None;
+                }
+
+                self.dispatch_config(ctx);
+                true
+            },
+            NumberColumnStyleMsg::NumberBackModeChanged(val) => {
+                self.bg_mode = val;
+                self.config.number_bg_mode = val;
+                if self.bg_mode.needs_gradient() {
+                    self.config.bg_gradient = Some(self.bg_gradient.unwrap());
+                } else {
+                    self.config.bg_gradient = None;
+                }
+
+                self.dispatch_config(ctx);
+                true
+            },
+            NumberColumnStyleMsg::GradientChanged(side, gradient) => {
+                match (side, gradient) {
+                    (Fg, Some(x)) => {
+                        self.fg_gradient = Some(x);
+                        self.config.fg_gradient = Some(x);
+                    },
+                    (Fg, None) => {
+                        self.fg_gradient = Some(self.default_config.fg_gradient);
+                        self.config.fg_gradient = None;
+                    },
+                    (Bg, Some(x)) => {
+                        self.bg_gradient = Some(x);
+                        self.config.bg_gradient = Some(x);
+                    },
+                    (Bg, None) => {
+                        self.bg_gradient = Some(self.default_config.bg_gradient);
+                        self.config.bg_gradient = None;
+                    },
                 };
+
                 self.dispatch_config(ctx);
                 false
-            }
+            },
+            NumberColumnStyleMsg::DefaultGradientChanged(gradient) => {
+                self.fg_gradient.get_or_insert(gradient);
+                self.bg_gradient.get_or_insert(gradient);
+                self.default_config.fg_gradient = gradient;
+                self.default_config.bg_gradient = gradient;
+                true
+            },
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        // Fixed precision control oninput callback
-        let fixed_oninput = ctx.link().callback(|event: InputEvent| {
-            NumberColumnStyleMsg::FixedChanged(
-                event
-                    .target()
-                    .unwrap()
-                    .unchecked_into::<web_sys::HtmlInputElement>()
-                    .value(),
-            )
+        let fg_mode_changed = ctx.link().callback(|x: Option<_>| {
+            NumberColumnStyleMsg::NumberForeModeChanged(x.unwrap_or_default())
         });
 
-        let fixed_value = self
-            .config
-            .fixed
-            .unwrap_or(ctx.props().default_config.fixed)
-            .to_string();
-
-        // Color enabled/disabled oninput callback
-        let color_enabled_oninput = ctx.link().callback(move |event: InputEvent| {
-            let input = event
-                .target()
-                .unwrap()
-                .unchecked_into::<web_sys::HtmlInputElement>();
-            NumberColumnStyleMsg::ColorEnabledChanged(input.checked())
+        let bg_mode_changed = ctx.link().callback(|x: Option<_>| {
+            NumberColumnStyleMsg::NumberBackModeChanged(x.unwrap_or_default())
         });
 
-        let selected_color_mode = match self.color_mode {
-            NumberColorMode::Disabled => NumberColorMode::default(),
-            x => x,
+        let fg_controls = match self.fg_mode {
+            NumberForegroundMode::Disabled => html! {},
+            NumberForegroundMode::Color => html! {
+                <div class="row">
+                    <ColorRangeSelector ..self.color_props("fg-color", Fg, false, ctx) />
+                </div>
+            },
+            NumberForegroundMode::Bar => html! {
+                <>
+                    <div class="row">
+                        <ColorRangeSelector ..self.color_props("bar-color", Fg, false, ctx) />
+                    </div>
+                    <NumberField ..self.max_value_props(Fg, ctx) />
+                </>
+            },
         };
 
-        // Color mode radio callback
-        let color_mode_changed = ctx
-            .link()
-            .callback(NumberColumnStyleMsg::NumberColorModeChanged);
-
-        let select_values = vec![
-            NumberColorMode::Foreground,
-            NumberColorMode::Background,
-            NumberColorMode::Gradient,
-            NumberColorMode::Bar,
-        ];
-
-        let foreground_controls = if self.config.number_color_mode == NumberColorMode::Foreground {
-            html_template! {
-                <span class="row">{ "Foreground" }</span>
-                <div class="row section inner_section">
-                    <ColorRangeSelector ..self.color_props(ctx) />
+        let bg_controls = match self.bg_mode {
+            NumberBackgroundMode::Disabled => html! {},
+            NumberBackgroundMode::Color => html! {
+                <div class="row">
+                    <ColorRangeSelector ..self.color_props("bg-color", Bg,false, ctx) />
                 </div>
-            }
-        } else {
-            html! {
-                <span class="row">{ "Foreground" }</span>
-            }
+            },
+            NumberBackgroundMode::Gradient => html! {
+                <>
+                    <div class="row">
+                        <ColorRangeSelector ..self.color_props("gradient-color", Bg, true, ctx) />
+                    </div>
+                    <NumberField ..self.max_value_props(Bg, ctx) />
+                </>
+            },
+            NumberBackgroundMode::Pulse => html! {
+                <div class="row">
+                    <ColorRangeSelector ..self.color_props("pulse-color", Bg, true, ctx) />
+                </div>
+            },
         };
 
-        let background_controls = if self.config.number_color_mode == NumberColorMode::Background {
-            html_template! {
-                <span class="row">{ "Background" }</span>
-                <div class="row section inner_section">
-                    <ColorRangeSelector ..self.color_props(ctx) />
+        html! {
+            <>
+                <LocalStyle href={css!("column-style")} />
+                <div id="column-style-container" class="number-column-style-container">
+                    <SelectEnumField<NumberForegroundMode>
+                        label="foreground"
+                        on_change={fg_mode_changed}
+                        current_value={self.fg_mode}
+                    />
+                    { fg_controls }
+                    <SelectEnumField<NumberBackgroundMode>
+                        label="background"
+                        on_change={bg_mode_changed}
+                        current_value={self.bg_mode}
+                    />
+                    { bg_controls }
                 </div>
-            }
-        } else {
-            html! {
-                <span class="row">{ "Background" }</span>
-            }
-        };
-
-        let gradient_controls = if self.config.number_color_mode == NumberColorMode::Gradient {
-            html_template! {
-                <span class="row">{ "Gradient" }</span>
-                <div class="row section inner_section">
-                    <ColorRangeSelector ..self.color_props(ctx) />
-                    <MaxValueChooser ..self.max_value_props(ctx) />
-                </div>
-            }
-        } else {
-            html! {
-                <span class="row">{ "Gradient" }</span>
-            }
-        };
-
-        let bar_controls = if self.config.number_color_mode == NumberColorMode::Bar {
-            html_template! {
-                <span class="row">{ "Bar" }</span>
-                <div class="row section inner_section">
-                    <ColorRangeSelector ..self.color_props(ctx) />
-                    <MaxValueChooser ..self.max_value_props(ctx) />
-                </div>
-            }
-        } else {
-            html! {
-                <span class="row">{ "Bar" }</span>
-            }
-        };
-
-        html_template! {
-            <style>
-                { &CSS }
-            </style>
-            <div id="column-style-container">
-                <div>
-                    <label id="fixed-examples" class="indent">{
-                        self.make_fixed_text(ctx)
-                    }</label>
-                </div>
-                <div class="row section">
-                    <input type="checkbox" checked=true disabled=true/>
-                    <input
-                        id="fixed-param"
-                        class="parameter"
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={ fixed_value }
-                        oninput={ fixed_oninput }/>
-                </div>
-                <div>
-                    <label class="indent">{ "Color" }</label>
-                </div>
-                <div>
-                    <input
-                        id="color-selected"
-                        type="checkbox"
-                        oninput={ color_enabled_oninput }
-                        checked={ self.config.number_color_mode.is_enabled() } />
-                    <RadioList<NumberColorMode>
-                        class="indent"
-                        disabled={ !self.config.number_color_mode.is_enabled() }
-                        values={ select_values }
-                        selected={ selected_color_mode }
-                        on_change={ color_mode_changed } >
-
-                        { foreground_controls }
-                        { background_controls }
-                        { gradient_controls }
-                        { bar_controls }
-
-                    </RadioList<NumberColorMode>>
-                </div>
-
-            </div>
+            </>
         }
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct MaxValueChooserProps {
-    max_value: f64,
-    on_max_value: Callback<String>,
-}
-
-#[function_component(MaxValueChooser)]
-fn max_value_chooser(props: &MaxValueChooserProps) -> Html {
-    let oninput = props.on_max_value.reform(|event: InputEvent| {
-        event
-            .target()
-            .unwrap()
-            .unchecked_into::<HtmlInputElement>()
-            .value()
-    });
-
-    html_template! {
-        <label>{ "Max" }</label>
-        <input
-            id="gradient-param"
-            value={ format!("{}", props.max_value) }
-            class="parameter"
-            oninput={ oninput }
-            type="number"
-            min="0" />
     }
 }
 
 impl NumberColumnStyle {
     /// When this config has changed, we must signal the wrapper element.
     fn dispatch_config(&self, ctx: &Context<Self>) {
-        let config = match &self.config {
+        let mut config = self.config.clone();
+        match &self.config {
             NumberColumnStyleConfig {
-                pos_color: Some(pos_color),
-                neg_color: Some(neg_color),
+                pos_fg_color: Some(pos_color),
+                neg_fg_color: Some(neg_color),
                 ..
-            } if *pos_color == ctx.props().default_config.pos_color
-                && *neg_color == ctx.props().default_config.neg_color =>
+            } if *pos_color == self.default_config.pos_fg_color
+                && *neg_color == self.default_config.neg_fg_color =>
             {
-                NumberColumnStyleConfig {
-                    pos_color: None,
-                    neg_color: None,
-                    ..self.config
-                }
-            }
-            x => x.clone(),
+                config.pos_fg_color = None;
+                config.neg_fg_color = None;
+            },
+            _ => {},
         };
 
-        ctx.props().on_change.emit(config);
+        match &self.config {
+            NumberColumnStyleConfig {
+                pos_bg_color: Some(pos_color),
+                neg_bg_color: Some(neg_color),
+                ..
+            } if *pos_color == self.default_config.pos_bg_color
+                && *neg_color == self.default_config.neg_bg_color =>
+            {
+                config.pos_bg_color = None;
+                config.neg_bg_color = None;
+            },
+            _ => {},
+        };
+
+        let update = Some(config).filter(|config| config != &NumberColumnStyleConfig::default());
+
+        ctx.props()
+            .on_change
+            .emit(ColumnConfigValueUpdate::DatagridNumberStyle(update));
     }
 
-    fn color_props(&self, ctx: &Context<Self>) -> ColorRangeProps {
-        let on_pos_color = ctx.link().callback(NumberColumnStyleMsg::PosColorChanged);
-        let on_neg_color = ctx.link().callback(NumberColumnStyleMsg::NegColorChanged);
+    fn color_props(
+        &self,
+        id: &str,
+        side: Side,
+        is_gradient: bool,
+        ctx: &Context<Self>,
+    ) -> ColorRangeProps {
+        let on_pos_color = ctx
+            .link()
+            .callback(move |x| NumberColumnStyleMsg::PosColorChanged(side, x));
+        let on_neg_color = ctx
+            .link()
+            .callback(move |x| NumberColumnStyleMsg::NegColorChanged(side, x));
+
         props!(ColorRangeProps {
-            pos_color: self.pos_color.to_owned(),
-            neg_color: self.neg_color.to_owned(),
+            id: id.to_string(),
+            is_gradient,
+            pos_color: if side == Fg {
+                &self.pos_fg_color
+            } else {
+                &self.pos_bg_color
+            }
+            .to_owned(),
+            neg_color: if side == Fg {
+                &self.neg_fg_color
+            } else {
+                &self.neg_bg_color
+            }
+            .to_owned(),
             on_pos_color,
             on_neg_color
         })
     }
 
-    fn max_value_props(&self, ctx: &Context<Self>) -> MaxValueChooserProps {
-        let on_max_value = ctx.link().callback(NumberColumnStyleMsg::GradientChanged);
-        props!(MaxValueChooserProps {
-            max_value: self.gradient,
-            on_max_value
-        })
-    }
+    fn max_value_props(&self, side: Side, ctx: &Context<Self>) -> NumberFieldProps {
+        let on_change = ctx
+            .link()
+            .callback(move |x| NumberColumnStyleMsg::GradientChanged(side, x));
 
-    /// Human readable precision hint, e.g. "Prec 0.001" for `{fixed: 3}`.
-    fn make_fixed_text(&self, ctx: &Context<Self>) -> String {
-        let fixed = match self.config.fixed {
-            Some(x) if x > 0 => format!("0.{}1", "0".repeat(x as usize - 1)),
-            None if ctx.props().default_config.fixed > 0 => {
-                let n = ctx.props().default_config.fixed as usize - 1;
-                format!("0.{}1", "0".repeat(n))
-            }
-            Some(_) | None => "1".to_owned(),
+        let value = if side == Fg {
+            self.fg_gradient.unwrap_or_default()
+        } else {
+            self.bg_gradient.unwrap_or_default()
         };
 
-        format!("Prec {}", fixed)
+        props!(NumberFieldProps {
+            default: value,
+            current_value: value,
+            label: "max-value",
+            on_change
+        })
     }
 
     fn reset(
         config: &NumberColumnStyleConfig,
         default_config: &NumberColumnStyleDefaultConfig,
-    ) -> NumberColumnStyle {
+    ) -> Self {
         let mut config = config.clone();
-        let gradient = match config.gradient {
-            Some(x) => x,
-            None => default_config.gradient,
-        };
+        let fg_gradient = config.fg_gradient;
+        let bg_gradient = config.bg_gradient;
 
-        let pos_color = config
-            .pos_color
+        let pos_fg_color = config
+            .pos_fg_color
             .as_ref()
-            .unwrap_or(&default_config.pos_color)
+            .unwrap_or(&default_config.pos_fg_color)
             .to_owned();
 
-        let neg_color = config
-            .neg_color
+        let neg_fg_color = config
+            .neg_fg_color
             .as_ref()
-            .unwrap_or(&default_config.neg_color)
+            .unwrap_or(&default_config.neg_fg_color)
             .to_owned();
 
-        let color_mode = match config.number_color_mode {
-            NumberColorMode::Disabled => NumberColorMode::default(),
-            x => {
-                config.pos_color = Some(pos_color.to_owned());
-                config.neg_color = Some(neg_color.to_owned());
-                x
-            }
-        };
+        let pos_bg_color = config
+            .pos_bg_color
+            .as_ref()
+            .unwrap_or(&default_config.pos_bg_color)
+            .to_owned();
 
-        NumberColumnStyle {
+        let neg_bg_color = config
+            .neg_bg_color
+            .as_ref()
+            .unwrap_or(&default_config.neg_bg_color)
+            .to_owned();
+
+        config.pos_fg_color = Some(pos_fg_color.to_owned());
+        config.neg_fg_color = Some(neg_fg_color.to_owned());
+        let fg_mode = config.number_fg_mode;
+        config.pos_bg_color = Some(pos_bg_color.to_owned());
+        config.neg_bg_color = Some(neg_bg_color.to_owned());
+        let bg_mode = config.number_bg_mode;
+        Self {
             config,
-            color_mode,
-            pos_color,
-            neg_color,
-            gradient,
+            default_config: default_config.clone(),
+            fg_mode,
+            bg_mode,
+            pos_fg_color,
+            neg_fg_color,
+            pos_bg_color,
+            neg_bg_color,
+            fg_gradient,
+            bg_gradient,
         }
     }
 }

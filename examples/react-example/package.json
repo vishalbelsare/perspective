@@ -1,0 +1,27 @@
+{
+    "name": "react-example",
+    "private": true,
+    "version": "3.2.1",
+    "description": "An example app built using `@finos/perspective-viewer`.",
+    "scripts": {
+        "start": "webpack serve --open",
+        "webpack": "webpack --colour"
+    },
+    "keywords": [],
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@finos/perspective": "workspace:^",
+        "@finos/perspective-viewer": "workspace:^",
+        "@finos/perspective-viewer-d3fc": "workspace:^",
+        "@finos/perspective-viewer-datagrid": "workspace:^",
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2"
+    },
+    "devDependencies": {
+        "@finos/perspective-webpack-plugin": "workspace:^",
+        "@types/react": "^17.0.2",
+        "@types/react-dom": "^17.0.2",
+        "source-map-loader": "^0.2.4",
+        "ts-loader": "^6.2.1"
+    }
+}

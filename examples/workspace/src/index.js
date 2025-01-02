@@ -1,24 +1,30 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 import perspective from "@finos/perspective";
 import "@finos/perspective-workspace";
+import "@finos/perspective-viewer";
 import "@finos/perspective-viewer-datagrid";
 import "@finos/perspective-viewer-d3fc";
 
-import "./index.less";
+import "./index.css";
+import "@finos/perspective-workspace/dist/css/pro.css";
+import "@finos/perspective-viewer/dist/css/themes.css";
 
 const datasource = async () => {
-    const req = fetch("./superstore.arrow");
+    const req = fetch("./superstore.lz4.arrow");
     const resp = await req;
     const buffer = await resp.arrayBuffer();
-    const worker = perspective.shared_worker();
+    const worker = await perspective.worker();
     return await worker.table(buffer);
 };
 
@@ -34,18 +40,30 @@ const DEFAULT_LAYOUT = {
         },
     },
     viewers: {
-        One: {table: "superstore", editable: true},
+        One: {
+            table: "superstore",
+            title: "Test Widget I",
+            editable: true,
+            linked: true,
+        },
+        Two: {
+            table: "superstore",
+            title: "Test Widget II (modified)",
+            linked: true,
+        },
         Three: {
             table: "superstore",
-            name: "Test Widget III (modified)",
+            title: "Test Widget III (modified)",
             group_by: ["State"],
             columns: ["Sales", "Profit"],
+            linked: true,
         },
         Four: {
             table: "superstore",
-            name: "Test Widget IV (modified)",
+            title: "Test Widget IV (modified)",
             group_by: ["Category", "Sub-Category"],
             columns: ["Sales", "Profit"],
+            linked: true,
         },
     },
 };

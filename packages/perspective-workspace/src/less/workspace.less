@@ -1,13 +1,27 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-@import "../../../../node_modules/@lumino/widgets/style/index.css";
+@import "@lumino/widgets/style/widget.css";
+@import "@lumino/widgets/style/accordionpanel.css";
+@import "@lumino/widgets/style/commandpalette.css";
+@import "@lumino/widgets/style/dockpanel.css";
+@import "@lumino/widgets/style/menu.css";
+@import "@lumino/widgets/style/menubar.css";
+@import "@lumino/widgets/style/scrollbar.css";
+@import "@lumino/widgets/style/splitpanel.css";
+@import "@lumino/widgets/style/tabbar.css";
+@import "@lumino/widgets/style/tabpanel.css";
+
+@import "./injected.less";
 
 :host {
     @import "./tabbar.less";
@@ -16,21 +30,21 @@
 
     background-color: hsl(210deg 18% 90%);
 
-    width: 100%;
-    height: 100%;
+    // width: 100%;
+    // height: 100%;
 
     .workspace {
         width: 100%;
         height: 100%;
     }
 
-    .p-SplitPanel {
+    .lm-SplitPanel {
         height: 100%;
         width: 100%;
     }
 
-    div.p-SplitPanel-handle {
-        background-color: inherit; //var(--master-divider--background-color);
+    div.lm-SplitPanel-handle {
+        background-color: var(--workspace-split-panel-handle--background-color);
     }
 
     .master-panel {
@@ -42,11 +56,15 @@
         }
     }
 
-    .perspective-workspace.context-menu * .p-SplitPanel-handle {
+    .perspective-workspace.context-menu * .lm-SplitPanel-handle {
         opacity: 0.2;
     }
 
-    .perspective-workspace.context-menu > .p-SplitPanel-handle {
+    .perspective-workspace.context-menu > .lm-SplitPanel-handle {
         opacity: 0.2;
+    }
+
+    .context-menu .lm-TabBar:not(.context-focus) {
+        pointer-events: none;
     }
 }

@@ -8,9 +8,6 @@ auto-save-list
 tramp
 .\#*
 
-# npm lock file
-package-lock.json
-
 # Intellij/WebStorm IDE
 *.iml
 /.idea
@@ -19,7 +16,6 @@ package-lock.json
 *.code-workspace
 .history
 /jsconfig.json
-.vscode
 
 # Org-mode
 .org-id-locations
@@ -91,7 +87,12 @@ flycheck_*.el
 *.out
 *.app
 
-build
+# Build artifacts
+rust/target*
+/docs/build
+/packages/*/build
+/python/*/build
+/examples/*/build
 CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
@@ -100,32 +101,55 @@ node_modules
 *.mem
 ftpsync.settings
 *.log
-screenshots/
 Gemfile
 Gemfile.lock
 Vagrantfile
 /packages/sigma
-/packages/fin-hypergrid
-coverage
+cmake-build-debug
+/src/include/boost
+obj
+packages/*/cjs
+cppbuild
+docsbuild
+tools/perspective-build/lib
+packages/perspective-esbuild-plugin/lib
+rust/perspective-python/perspective/nbextension/static
+rust/perspective-python/perspective/labextension
+boost_*.tar.gz
 
+# editor, IDE, OS
 .DS_Store
+.idea
+rust/perspective-viewer/target.vscode
+target.vscode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.default.json
+!.vscode/tasks.json
+!.vscode/perspective.code-snippets
 
+.llvm
+
+# docs
 website/translated_docs
 website/build/
 website/yarn.lock
 website/node_modules
 website/i18n/*
 !website/i18n/en.json
-.vscode
+website/static/css/material-dark.css
+website/static/css/pro-dark.css
 
-.idea
-cmake-build-debug
+# test artifacts
 .ipynb_checkpoints
 .python-version
 .pytest_cache
-
-package.json.lerna_backup
-website/static/css/material-dark.css
+.mypy_cache
+.coverage
+coverage
+screenshots/
+junit.xml
+results.debug.json
 
 # CPP Compile
 /src/include/boost
@@ -133,28 +157,35 @@ obj
 packages/*/cjs
 cppbuild
 docsbuild
-.coverage
 
 # docs generated
+docs/.docusaurus
 docs/_build
+docs/i18n/en.json
 docs/modules.rst
 docs/perspective.*.rst
 docs/python
+docs/static/css/material-dark.css
+docs/i18n/en.json
+docs/.docusaurus
+docs/static/blocks
+docs/static/features
+docs/static/arrow/
+docs/static/js
+docs/static/js/logo.js
+docs/static/js/logo.js.map
+docs/static/css/pro-dark.css
+
+# other
 package.json.bak
 yarn.lock.bak
-docs/static/img/**/*
-!docs/static/img/logo/
-!docs/static/img/logo/**
-
-
-docs/static/arrow/
-.perspectiverc
 
 # Python
 *.pyc
 __pycache__/
+py_modules
 
-# Copied C++ source folders
+# Copied outer source folders
 python/perspective/cmake
 python/perspective/src
 python/perspective/test
@@ -163,31 +194,18 @@ python/cpp
 python/perspective/perspective_python.egg-info
 python/perspective/perspective/tests/table/psp_test
 python/perspective/perspective/node/assets/*
-/__pycache__
-docs/static/js/logo.js
-docs/static/js/logo.js.map
 python/perspective/pip-wheel-metadata
-junit.xml
 python/perspective/python_junit.xml
 python/perspective/coverage.xml
 python/perspective/bench/stresstest/results
-rust/perspective-viewer/target
-rust/perspective-viewer/pkg
-rust/perspective-viewer/target2
+rust/perspective-viewer/target*
+rust/perspective-viewer/target.vscode
 rust/perspective-viewer/pkg
 
-rust/perspective-viewer/target
-rust/perspective-viewer/target2
-
+# config and deps
+.perspectiverc
 .emsdk
 vcpkg
-
-docs/static/css/material-dark.css
-docs/i18n/en.json
-docs/static/js
-
-rust/perspective-viewer/target.vscode
-target.vscode
 
 # jupyterlab test artifacts
 packages/perspective-jupyterlab/test/config/jupyter/lab
@@ -196,3 +214,41 @@ docs/static/features
 results.debug.json
 
 tools/perspective-build/lib
+docs/.docusaurus
+packages/perspective-esbuild-plugin/lib
+docs/static/blocks
+test-results/
+playwright-report/
+playwright/.cache/
+
+.pyodide-xbuildenv
+benchmark_venv
+
+venv/
+testenv
+.cache
+.clangd
+.llvm/
+examples/blocks/src/nypd/nypdccrb.arrow
+.clangd
+rust/perspective/build
+rust/perspective-viewer/build
+rust/perspective-client/src/rust/proto.rs
+.vscode/vscode.css
+rust/perspective/src/ts/ts-rs
+rust/perspective-viewer/src/ts/ts-rs
+rust/perspective-js/build
+rust/perspective-js/src/ts/ts-rs
+rust/perspective-python/cpp
+rust/perspective-python/cmake
+rust/perspective-server/cpp
+rust/perspective-server/cmake
+
+.pyodide-*/
+rust/perspective-python/*.data
+rust/perspective-python/PKG-INFO
+rust/perspective-python/LICENSE.md
+rust/perspective-python/LICENSE_*
+rust/perspective-viewer/docs/exprtk.md
+rust/perspective-server/docs/lib_gen.md
+rust/perspective-client/docs/expression_gen.md

@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -36,16 +39,32 @@ struct PERSPECTIVE_EXPORT t_lstore_recipe {
     t_lstore_recipe();
     t_lstore_recipe(t_uindex capacity);
 
-    t_lstore_recipe(const std::string& dirname, const std::string& colname,
-        t_uindex capacity, t_backing_store backing_store);
+    t_lstore_recipe(
+        std::string dirname,
+        std::string colname,
+        t_uindex capacity,
+        t_backing_store backing_store
+    );
 
-    t_lstore_recipe(const std::string& dirname, const std::string& colname,
-        t_uindex capacity, t_fflag fflags, t_fflag fmode,
-        t_fflag creation_disposition, t_fflag mprot, t_fflag mflags,
-        t_backing_store backing_store);
+    t_lstore_recipe(
+        std::string dirname,
+        std::string colname,
+        t_uindex capacity,
+        t_fflag fflags,
+        t_fflag fmode,
+        t_fflag creation_disposition,
+        t_fflag mprot,
+        t_fflag mflags,
+        t_backing_store backing_store
+    );
 
-    t_lstore_recipe(const std::string& colname, t_uindex capacity,
-        t_fflag mprot, t_fflag mflags, t_backing_store backing_store);
+    t_lstore_recipe(
+        std::string colname,
+        t_uindex capacity,
+        t_fflag mprot,
+        t_fflag mflags,
+        t_backing_store backing_store
+    );
 
     std::string m_dirname;
     std::string m_colname;
@@ -75,11 +94,14 @@ typedef std::vector<t_lstore_recipe> t_lstore_argvec;
 #ifdef PSP_STORAGE_VERIFY
 #define STORAGE_CHECK_ACCESS_GET(idx)                                          \
     PSP_VERBOSE_ASSERT(                                                        \
-        sizeof(T) * idx < (m_capacity + sizeof(T)), "Invalid access");
+        sizeof(T) * idx < (m_capacity + sizeof(T)), "Invalid access"           \
+    );
 #define PSP_CHECK_CAPACITY()                                                   \
-    PSP_VERBOSE_ASSERT(m_size <= m_capacity,                                   \
+    PSP_VERBOSE_ASSERT(                                                        \
+        m_size <= m_capacity,                                                  \
         "Size capacity "                                                       \
-        "mismatch")
+        "mismatch"                                                             \
+    )
 #define STORAGE_CHECK_ACCESS(idx)                                              \
     PSP_VERBOSE_ASSERT(sizeof(T) * idx < m_capacity, "Invalid access");
 #else
@@ -107,8 +129,8 @@ public:
     t_lstore(const t_lstore& s, t_lstore_tmp_init_tag t);
     ~t_lstore();
 
-    t_lstore(t_lstore&& other);
-    t_lstore& operator=(t_lstore&& other);
+    t_lstore(t_lstore&& other) noexcept;
+    t_lstore& operator=(t_lstore&& other) noexcept;
     void copy_helper(t_lstore& other);
     void copy_helper(const t_lstore& other);
 
@@ -122,10 +144,10 @@ public:
     // in bytes
     void reserve(t_uindex capacity);
     void shrink(t_uindex capacity);
-    void copy(t_lstore& out);
+    void copy(t_lstore& out) const;
     void load(const std::string& fname);
     void save(const std::string& fname);
-    void warmup();
+    void warmup() const;
 
     t_uindex size() const;
     t_uindex capacity() const;
@@ -207,7 +229,7 @@ public:
 
 #ifdef PSP_ENABLE_PYTHON
     /* Python bits */
-    py::array _as_numpy(t_dtype dtype);
+    // py::array _as_numpy(t_dtype dtype);
 #endif
 
 protected:
@@ -218,6 +240,7 @@ protected:
 private:
     void reserve_impl(t_uindex capacity, bool allow_shrink);
     t_handle create_file();
+    // NOLINTNEXTLINE
     void* create_mapping();
     void resize_mapping(t_uindex cap_new);
     void destroy_mapping();
@@ -254,8 +277,7 @@ private:
 
 #ifdef PSP_MPROTECT
 struct t_unlock_store {
-    inline t_unlock_store(t_lstore* store)
-        : m_store(store) {
+    inline t_unlock_store(t_lstore* store) : m_store(store) {
         m_store->unfreeze_impl();
     }
 
@@ -276,12 +298,14 @@ struct t_unlock_store {
 template <typename T>
 void
 t_lstore::push_back(T value) {
-    if (m_size + sizeof(T) >= m_capacity)
-        reserve(static_cast<t_uindex>(std::ceil(m_capacity + m_size
-            + sizeof(T)))); // reserve will multiply by m_resize_factor
+    if (m_size + sizeof(T) >= m_capacity) {
+        reserve(static_cast<t_uindex>(std::ceil(m_capacity + m_size + sizeof(T))
+        )); // reserve will multiply by m_resize_factor
+    }
 
     PSP_VERBOSE_ASSERT(
-        m_size + sizeof(T) < m_capacity, "Insufficient capacity.");
+        m_size + sizeof(T) < m_capacity, "Insufficient capacity."
+    );
     T* ptr = reinterpret_cast<T*>(static_cast<unsigned char*>(m_base) + m_size);
     *ptr = value;
     {

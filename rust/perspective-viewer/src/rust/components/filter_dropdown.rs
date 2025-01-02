@@ -1,19 +1,22 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
-
-use super::modal::*;
-use crate::utils::WeakScope;
-use crate::*;
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 use web_sys::*;
 use yew::prelude::*;
 
-static CSS: &str = include_str!("../../../build/css/filter-dropdown.css");
+use super::modal::*;
+use crate::utils::WeakScope;
+
+static CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/css/filter-dropdown.css"));
 
 pub enum FilterDropDownMsg {
     SetValues(Vec<String>),
@@ -27,7 +30,6 @@ pub struct FilterDropDown {
     values: Option<Vec<String>>,
     selected: usize,
     on_select: Option<Callback<String>>,
-    // link: Scope<Self>,
 }
 
 #[derive(Properties, PartialEq)]
@@ -48,11 +50,10 @@ impl Component for FilterDropDown {
 
     fn create(ctx: &Context<Self>) -> Self {
         ctx.set_modal_link();
-        FilterDropDown {
+        Self {
             values: Some(vec![]),
             selected: 0,
             on_select: None,
-            // link,
         }
     }
 
@@ -61,29 +62,29 @@ impl Component for FilterDropDown {
             FilterDropDownMsg::SetCallback(callback) => {
                 self.on_select = Some(callback);
                 false
-            }
+            },
             FilterDropDownMsg::SetValues(values) => {
                 self.values = Some(values);
                 self.selected = 0;
                 true
-            }
+            },
             FilterDropDownMsg::ItemSelect => {
                 if let Some(ref values) = self.values {
                     match values.get(self.selected) {
                         None => {
                             console::error_1(&"Selected out-of-bounds".into());
                             false
-                        }
+                        },
                         Some(x) => {
                             self.on_select.as_ref().unwrap().emit(x.clone());
                             false
-                        }
+                        },
                     }
                 } else {
                     console::error_1(&"No Values".into());
                     false
                 }
-            }
+            },
             FilterDropDownMsg::ItemDown => {
                 self.selected += 1;
                 if let Some(ref values) = self.values {
@@ -93,7 +94,7 @@ impl Component for FilterDropDown {
                 };
 
                 true
-            }
+            },
             FilterDropDownMsg::ItemUp => {
                 if let Some(ref values) = self.values {
                     if self.selected < 1 {
@@ -103,11 +104,11 @@ impl Component for FilterDropDown {
 
                 self.selected -= 1;
                 true
-            }
+            },
         }
     }
 
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, _ctx: &Context<Self>, _old: &Self::Properties) -> bool {
         false
     }
 
@@ -115,8 +116,7 @@ impl Component for FilterDropDown {
         let body = html! {
             if let Some(ref values) = self.values {
                 if !values.is_empty() {
-                    {
-                        for values
+                    { for values
                             .iter()
                             .enumerate()
                             .map(|(idx, value)| {
@@ -132,19 +132,13 @@ impl Component for FilterDropDown {
                                         <span onmousedown={ click }>{ value }</span>
                                     }
                                 }
-                            })
-                    }
+                            }) }
                 } else {
                     <span class="no-results">{ "No Completions" }</span>
                 }
             }
         };
 
-        html_template! {
-            <style>
-                { &CSS }
-            </style>
-            { body }
-        }
+        html! { <><style>{ &CSS }</style>{ body }</> }
     }
 }

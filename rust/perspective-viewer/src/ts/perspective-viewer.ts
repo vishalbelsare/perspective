@@ -1,12 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms
- * of the Apache License 2.0.  The full license can be found in the LICENSE
- * file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 /**
  * Module for the `<perspective-viewer>` custom element.  This module has no
@@ -29,22 +31,27 @@
  * @module perspective-viewer
  */
 
-export {IPerspectiveViewerPlugin} from "./plugin";
-export {HTMLPerspectiveViewerPluginElement} from "./plugin";
-export {HTMLPerspectiveViewerElement, PerspectiveViewerConfig} from "./viewer";
+export { IPerspectiveViewerPlugin } from "./plugin";
+export { HTMLPerspectiveViewerPluginElement } from "./plugin";
+import {
+    ExportDropDownMenuElement,
+    CopyDropDownMenuElement,
+} from "../../dist/pkg/perspective-viewer";
+
+export interface HTMLPerspectiveViewerExportMenu
+    extends HTMLElement,
+        ExportDropDownMenuElement {}
+
+export interface HTMLPerspectiveViewerCopyMenu
+    extends HTMLElement,
+        CopyDropDownMenuElement {}
+
 export * from "./extensions";
-export * from "./migrate";
+export type * from "./ts-rs/ViewerConfigUpdate.d.ts";
+export type * from "./ts-rs/ColumnConfigValues.d.ts";
+export type * from "./ts-rs/Filter.d.ts";
+export type * from "./ts-rs/FilterTerm.d.ts";
+export type * from "./ts-rs/FilterReducer.d.ts";
+// export type * from "./ts-rs/Vi"
 
-import "./number-column-style";
-import "./string-column-style";
-import "./copy_menu";
-import "./export_menu";
-import "mobile-drag-drop-shadow-dom";
-
-import {HTMLPerspectiveViewerPluginElement} from "./plugin";
-import {HTMLPerspectiveViewerElement} from "./viewer";
-
-export default {
-    HTMLPerspectiveViewerElement,
-    HTMLPerspectiveViewerPluginElement,
-};
+import "./bootstrap";
