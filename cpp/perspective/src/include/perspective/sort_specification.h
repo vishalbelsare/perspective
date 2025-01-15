@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -24,11 +27,15 @@ enum t_sortspec_type {
 
 struct PERSPECTIVE_EXPORT t_sortspec {
     t_sortspec();
-    t_sortspec(const std::string& column_name, t_index agg_index,
-        t_sorttype sort_type);
+    t_sortspec(
+        std::string column_name, t_index agg_index, t_sorttype sort_type
+    );
     t_sortspec(t_index agg_index, t_sorttype sort_type);
-    t_sortspec(const std::vector<t_tscalar>& path, t_index agg_index,
-        t_sorttype sort_type);
+    t_sortspec(
+        const std::vector<t_tscalar>& path,
+        t_index agg_index,
+        t_sorttype sort_type
+    );
 
     bool operator==(const t_sortspec& s2) const;
     bool operator!=(const t_sortspec& s2) const;
@@ -40,12 +47,12 @@ struct PERSPECTIVE_EXPORT t_sortspec {
     std::vector<t_tscalar> m_path;
 };
 
-PERSPECTIVE_EXPORT std::vector<t_sorttype> get_sort_orders(
-    const std::vector<t_sortspec>& vec);
+PERSPECTIVE_EXPORT std::vector<t_sorttype>
+get_sort_orders(const std::vector<t_sortspec>& vec);
 
 } // end namespace perspective
 
 namespace std {
-PERSPECTIVE_EXPORT std::ostream& operator<<(
-    std::ostream& os, const perspective::t_sortspec& t);
+PERSPECTIVE_EXPORT std::ostream&
+operator<<(std::ostream& os, const perspective::t_sortspec& t);
 } // end namespace std

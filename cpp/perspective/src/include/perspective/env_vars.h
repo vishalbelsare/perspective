@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -29,8 +32,8 @@ struct PERSPECTIVE_EXPORT t_env {
 
     static inline bool
     log_schema_gnode_flattened() {
-        static const bool rv
-            = std::getenv("PSP_LOG_SCHEMA_GNODE_FLATTENED") != 0;
+        static const bool rv =
+            std::getenv("PSP_LOG_SCHEMA_GNODE_FLATTENED") != 0;
         return rv;
     }
 
@@ -78,8 +81,8 @@ struct PERSPECTIVE_EXPORT t_env {
 
     static inline bool
     log_data_gnode_transitions() {
-        static const bool rv
-            = std::getenv("PSP_LOG_DATA_GNODE_TRANSITIONS") != 0;
+        static const bool rv =
+            std::getenv("PSP_LOG_DATA_GNODE_TRANSITIONS") != 0;
         return rv;
     }
 
@@ -97,8 +100,8 @@ struct PERSPECTIVE_EXPORT t_env {
 
     static inline bool
     log_data_nsparse_strand_deltas() {
-        static const bool rv
-            = std::getenv("PSP_LOG_DATA_NSPARSE_STRAND_DELTAS") != 0;
+        static const bool rv =
+            std::getenv("PSP_LOG_DATA_NSPARSE_STRAND_DELTAS") != 0;
         return rv;
     }
 
@@ -116,15 +119,15 @@ struct PERSPECTIVE_EXPORT t_env {
 
     static inline bool
     log_data_nsparse_stree_prev() {
-        static const bool rv
-            = std::getenv("PSP_LOG_DATA_NSPARSE_STREE_PREV") != 0;
+        static const bool rv =
+            std::getenv("PSP_LOG_DATA_NSPARSE_STREE_PREV") != 0;
         return rv;
     }
 
     static inline bool
     log_data_nsparse_stree_after() {
-        static const bool rv
-            = std::getenv("PSP_LOG_DATA_NSPARSE_STREE_AFTER") != 0;
+        static const bool rv =
+            std::getenv("PSP_LOG_DATA_NSPARSE_STREE_AFTER") != 0;
         return rv;
     }
 
@@ -154,15 +157,15 @@ struct PERSPECTIVE_EXPORT t_env {
 
     static inline bool
     backout_force_current_row() {
-        static const bool rv
-            = std::getenv("PSP_BACKOUT_FORCE_CURRENT_ROW") != 0;
+        static const bool rv =
+            std::getenv("PSP_BACKOUT_FORCE_CURRENT_ROW") != 0;
         return rv;
     }
 
     static inline bool
     backout_eq_invalid_invalid() {
-        static const bool rv
-            = std::getenv("PSP_BACKOUT_EQ_INVALID_INVALID") != 0;
+        static const bool rv =
+            std::getenv("PSP_BACKOUT_EQ_INVALID_INVALID") != 0;
         return rv;
     }
 };

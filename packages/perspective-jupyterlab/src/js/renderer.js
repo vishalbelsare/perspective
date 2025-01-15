@@ -1,14 +1,17 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-import {ActivityMonitor} from "@jupyterlab/coreutils";
-import {ILayoutRestorer} from "@jupyterlab/application";
+import { ActivityMonitor } from "@jupyterlab/coreutils";
+import { ILayoutRestorer } from "@jupyterlab/application";
 import {
     IThemeManager,
     WidgetTracker,
@@ -16,18 +19,17 @@ import {
     showDialog,
 } from "@jupyterlab/apputils";
 
-import {ABCWidgetFactory, DocumentWidget} from "@jupyterlab/docregistry";
-import {PerspectiveWidget} from "./psp_widget";
+import { ABCWidgetFactory, DocumentWidget } from "@jupyterlab/docregistry";
+import { PerspectiveWidget } from "./psp_widget";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-// const perspective = require("@finos/perspective").default;
-import perspective from "@finos/perspective/dist/esm/perspective.js";
+import perspective from "@finos/perspective";
+
 /**
  * The name of the factories that creates widgets.
  */
-const FACTORY_CSV = "CSVPerspective";
-const FACTORY_JSON = "JSONPerspective";
-const FACTORY_ARROW = "ArrowPerspective";
+const FACTORY_CSV = "Perspective-CSV";
+const FACTORY_JSON = "Perspective-JSON";
+const FACTORY_ARROW = "Perspective-Arrow";
 const RENDER_TIMEOUT = 1000;
 
 // create here to reuse for exception handling
@@ -48,9 +50,7 @@ const WORKER = perspective.worker();
 export class PerspectiveDocumentWidget extends DocumentWidget {
     constructor(options, type = "csv") {
         super({
-            content: new PerspectiveWidget("Perspective", {
-                editable: true,
-            }),
+            content: new PerspectiveWidget("Perspective"),
             context: options.context,
             reveal: options.reveal,
         });
@@ -129,7 +129,6 @@ export class PerspectiveDocumentWidget extends DocumentWidget {
                         this.context.model.fromString(resultAsB64);
                         this.context.save();
                     } else if (this._type === "json") {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const result = await view.to_json();
                         this.context.model.fromJSON(result);
                         this.context.save();
@@ -144,8 +143,8 @@ export class PerspectiveDocumentWidget extends DocumentWidget {
         // pickup theme from env
         this._psp.theme =
             document.body.getAttribute("data-jp-theme-light") === "false"
-                ? "Material Light"
-                : "Material Dark";
+                ? "Pro Light"
+                : "Pro Dark";
     }
 
     dispose() {
@@ -343,7 +342,7 @@ function activate(app, restorer, themeManager) {
                 ? themeManager.isLight(themeManager.theme)
                 : true;
 
-        const theme = isLight ? "Material Light" : "Material Dark";
+        const theme = isLight ? "Pro Light" : "Pro Dark";
         trackercsv.forEach((pspDocWidget) => {
             pspDocWidget.psp.theme = theme;
         });
@@ -365,9 +364,9 @@ function activate(app, restorer, themeManager) {
 /**
  * The perspective extension for files
  */
-export const perspectiveRenderers = {
+export const PerspectiveRenderers = {
     activate: activate,
-    id: "@finos/perspective-jupyterlab:renderers",
+    id: "@finos/perspective-jupyterlab-renderers",
     requires: [],
     optional: [ILayoutRestorer, IThemeManager],
     autoStart: true,

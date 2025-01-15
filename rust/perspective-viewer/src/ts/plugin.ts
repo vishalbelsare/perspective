@@ -1,14 +1,18 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms
- * of the Apache License 2.0.  The full license can be found in the LICENSE
- * file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-import type * as perspective from "@finos/perspective";
+import { View } from "@finos/perspective";
+
+// import type * as perspective from "@finos/perspective";
 
 /**
  * The `IPerspectiveViewerPlugin` interface defines the necessary API for a
@@ -43,7 +47,7 @@ import type * as perspective from "@finos/perspective";
  * ```
  * @noInheritDoc
  */
-export interface IPerspectiveViewerPlugin extends HTMLElement {
+export interface IPerspectiveViewerPlugin {
     /**
      * The name for this plugin, which is used as both it's unique key for use
      * as a parameter for the `plugin` field of a `ViewerConfig`, and as the
@@ -57,7 +61,7 @@ export interface IPerspectiveViewerPlugin extends HTMLElement {
      * other columns.  `"toggle"` mode toggles the column on or off (dependent
      * on column state), leaving existing columns alone.
      */
-    get select_mode(): "select" | "toggle" | undefined;
+    get select_mode(): string | undefined;
 
     /**
      * The minimum number of columns required for this plugin to operate.
@@ -80,6 +84,32 @@ export interface IPerspectiveViewerPlugin extends HTMLElement {
     get config_column_names(): string[] | undefined;
 
     /**
+     * The load priority of the plugin. If the plugin shares priority with another,
+     * the first to load has a higher priority.
+     *
+     * A larger number has a higher priority.
+     *
+     * The plugin with the highest priority will be loaded by default by the Perspective viewer.
+     * If you would like to instead begin with a lower priority plugin, choose it explicitly with
+     * a `HTMLPerspectiveViewerPluginElement.restore` call.
+     */
+    get priority(): number | undefined;
+
+    /**
+     * Given a column's grouping (determined by indexing it in `plugin.config_column_names`)
+     * and its view type, determines whether or not to render column styles in the settings sidebar.
+     * Implementing this function and `column_style_config` allows the plugin to interface with the viewer's column configuration API.
+     */
+    can_render_column_styles?: (view_type: string, group: string) => boolean;
+
+    /**
+     * Determines which column configuration controls are populated in the viewer.
+     * Corresponds to the data the plugin will recieve on save.
+     * Implementing this function and `can_render_column_styles` allows the plugin to interface with the viewer's column configuration API.
+     */
+    column_style_config?: (view_type: string, group: string) => any;
+
+    /**
      * Render this plugin using the provided `View`.  While there is no
      * provision to cancel a render in progress per se, calling a method on
      * a `View` which has been deleted will throw an exception.
@@ -92,7 +122,7 @@ export interface IPerspectiveViewerPlugin extends HTMLElement {
      * }
      * ```
      */
-    draw(view: perspective.View): Promise<void>;
+    draw(view: View): Promise<void>;
 
     /**
      * Draw under the assumption that the `ViewConfig` has not changed since
@@ -106,7 +136,7 @@ export interface IPerspectiveViewerPlugin extends HTMLElement {
      * }
      * ```
      */
-    update(view: perspective.View): Promise<void>;
+    update(view: View): Promise<void>;
 
     /**
      * Clear this plugin, though it is up to the discretion of the plugin
@@ -199,11 +229,24 @@ export class HTMLPerspectiveViewerPluginElement
         return undefined;
     }
 
-    async update(view: perspective.View): Promise<void> {
+    get priority(): number {
+        return 0;
+    }
+
+    can_render_column_styles(): boolean {
+        return false;
+    }
+
+    column_style_config(): any {
+        {
+        }
+    }
+
+    async update(view: View): Promise<void> {
         return this.draw(view);
     }
 
-    async draw(view: perspective.View): Promise<void> {
+    async draw(view: View): Promise<void> {
         this.style.backgroundColor = "#fff";
         const csv = await view.to_csv();
         const css = `margin:0;overflow:scroll;position:absolute;width:100%;height:100%`;
@@ -233,14 +276,4 @@ export class HTMLPerspectiveViewerPluginElement
     async delete(): Promise<void> {
         // Not Implemented
     }
-}
-
-if (
-    document.createElement("perspective-viewer-plugin").constructor ===
-    HTMLElement
-) {
-    window.customElements.define(
-        "perspective-viewer-plugin",
-        HTMLPerspectiveViewerPluginElement
-    );
 }

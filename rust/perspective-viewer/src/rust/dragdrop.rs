@@ -1,23 +1,29 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
-
-use crate::utils::*;
-use crate::*;
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
+
+use perspective_client::clone;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
 use web_sys::*;
+use yew::html::ImplicitClone;
 use yew::prelude::*;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+use crate::utils::*;
+use crate::*;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DragTarget {
     Active,
     GroupBy,
@@ -26,23 +32,25 @@ pub enum DragTarget {
     Filter,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DragEffect {
     Copy,
     Move(DragTarget),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct DragFrom {
     column: String,
     effect: DragEffect,
 }
 
+#[derive(Debug)]
 struct DragOver {
     target: DragTarget,
     index: usize,
 }
 
+#[derive(Debug)]
 enum DragState {
     NoDrag,
     DragInProgress(DragFrom),
@@ -56,12 +64,6 @@ impl Default for DragState {
 }
 
 impl DragState {
-    fn take(&mut self) -> Self {
-        let mut new = Self::NoDrag;
-        std::mem::swap(self, &mut new);
-        new
-    }
-
     const fn is_drag_in_progress(&self) -> bool {
         !matches!(self, Self::NoDrag)
     }
@@ -83,6 +85,7 @@ pub struct DragDrop(Rc<DragDropState>);
 
 impl Deref for DragDrop {
     type Target = Rc<DragDropState>;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -94,21 +97,9 @@ impl PartialEq for DragDrop {
     }
 }
 
+impl ImplicitClone for DragDrop {}
+
 impl DragDrop {
-    pub fn notify_drop(&self) {
-        let action = match self.drag_state.borrow_mut().take() {
-            DragState::DragOverInProgress(
-                DragFrom { column, effect },
-                DragOver { target, index },
-            ) => Some((column, target, effect, index)),
-            _ => None,
-        };
-
-        if let Some(action) = action {
-            self.drop_received.emit_all(action);
-        }
-    }
-
     /// Get the column name currently being drag/dropped.
     pub fn get_drag_column(&self) -> Option<String> {
         match *self.drag_state.borrow() {
@@ -118,54 +109,53 @@ impl DragDrop {
         }
     }
 
-    /// Start the drag/drop action with the name of the column being dragged.
-    pub fn drag_start(&self, column: String, effect: DragEffect) {
-        *self.drag_state.borrow_mut() = DragState::DragInProgress(DragFrom { column, effect });
-        self.dragstart_received.emit_all(effect)
-    }
-
-    /// End the drag/drop action by resetting the state to default.
-    pub fn drag_end(&self) {
-        let should_notify = self.drag_state.borrow_mut().take().is_drag_in_progress();
-        if should_notify {
-            self.dragend_received.emit_all(());
-        }
-    }
-
-    /// Leave the `action` zone.
-    pub fn drag_leave(&self, drag_target: DragTarget) {
-        let reset = match *self.drag_state.borrow() {
-            DragState::DragOverInProgress(
-                DragFrom { ref column, effect },
-                DragOver { target, .. },
-            ) if target == drag_target => Some((column.clone(), effect)),
+    pub fn get_drag_target(&self) -> Option<DragTarget> {
+        match *self.drag_state.borrow() {
+            DragState::DragInProgress(DragFrom {
+                effect: DragEffect::Move(target),
+                ..
+            })
+            | DragState::DragOverInProgress(
+                DragFrom {
+                    effect: DragEffect::Move(target),
+                    ..
+                },
+                _,
+            ) => Some(target),
             _ => None,
-        };
-
-        if let Some((column, effect)) = reset {
-            self.drag_start(column, effect);
         }
     }
 
-    // Enter the `action` zone at `index`, which must be <= the number of children
-    // in the container.
-    pub fn drag_enter(&self, target: DragTarget, index: usize) -> bool {
-        let mut drag_state = self.drag_state.borrow_mut();
-        let should_render = match &*drag_state {
-            DragState::DragOverInProgress(_, drag_to) => {
-                drag_to.target != target || drag_to.index != index
-            }
-            _ => true,
-        };
+    pub fn set_drag_image(&self, event: &DragEvent) -> ApiResult<()> {
+        event.stop_propagation();
+        if let Some(dt) = event.data_transfer() {
+            dt.set_drop_effect("move");
+            dt.set_data("text/plain", "{}").unwrap();
+        }
 
-        *drag_state = match &*drag_state {
-            DragState::DragOverInProgress(drag_from, _) | DragState::DragInProgress(drag_from) => {
-                DragState::DragOverInProgress(drag_from.clone(), DragOver { target, index })
-            }
-            _ => DragState::NoDrag,
-        };
+        let original: HtmlElement = event.target().into_apierror()?.unchecked_into();
+        let elem: HtmlElement = original
+            .children()
+            .get_with_index(0)
+            .unwrap()
+            .clone_node_with_deep(true)?
+            .unchecked_into();
 
-        should_render
+        elem.class_list().toggle("snap-drag-image")?;
+        original.append_child(&elem)?;
+        event.data_transfer().into_apierror()?.set_drag_image(
+            &elem,
+            event.offset_x(),
+            event.offset_y(),
+        );
+
+        ApiFuture::spawn(async move {
+            request_animation_frame().await;
+            original.remove_child(&elem)?;
+            Ok(())
+        });
+
+        Ok(())
     }
 
     // Is the drag/drop state currently in `action`?
@@ -177,6 +167,79 @@ impl DragDrop {
             ) if target == drag_target => Some((index, column.clone())),
             _ => None,
         }
+    }
+
+    pub fn notify_drop(&self, event: &DragEvent) {
+        event.prevent_default();
+        event.stop_propagation();
+        let action = match &*self.drag_state.borrow() {
+            DragState::DragOverInProgress(
+                DragFrom { column, effect },
+                DragOver { target, index },
+            ) => Some((column.to_string(), *target, *effect, *index)),
+            _ => None,
+        };
+
+        *self.drag_state.borrow_mut() = DragState::NoDrag;
+        if let Some(action) = action {
+            self.drop_received.emit(action);
+        }
+    }
+
+    /// Start the drag/drop action with the name of the column being dragged.
+    pub fn notify_drag_start(&self, column: String, effect: DragEffect) {
+        *self.drag_state.borrow_mut() = DragState::DragInProgress(DragFrom { column, effect });
+        let emit = self.dragstart_received.callback();
+        ApiFuture::spawn(async move {
+            request_animation_frame().await;
+            emit.emit(effect);
+            Ok(())
+        });
+    }
+
+    /// End the drag/drop action by resetting the state to default.
+    pub fn notify_drag_end(&self) {
+        if self.drag_state.borrow().is_drag_in_progress() {
+            *self.drag_state.borrow_mut() = DragState::NoDrag;
+            let emit = self.dragend_received.callback();
+            emit.emit(());
+        }
+    }
+
+    /// Leave the `action` zone.
+    pub fn notify_drag_leave(&self, drag_target: DragTarget) {
+        let reset = match *self.drag_state.borrow() {
+            DragState::DragOverInProgress(
+                DragFrom { ref column, effect },
+                DragOver { target, .. },
+            ) if target == drag_target => Some((column.clone(), effect)),
+            _ => None,
+        };
+
+        if let Some((column, effect)) = reset {
+            self.notify_drag_start(column, effect);
+        }
+    }
+
+    // Enter the `action` zone at `index`, which must be <= the number of children
+    // in the container.
+    pub fn notify_drag_enter(&self, target: DragTarget, index: usize) -> bool {
+        let mut drag_state = self.drag_state.borrow_mut();
+        let should_render = match &*drag_state {
+            DragState::DragOverInProgress(_, drag_to) => {
+                drag_to.target != target || drag_to.index != index
+            },
+            _ => true,
+        };
+
+        *drag_state = match &*drag_state {
+            DragState::DragOverInProgress(drag_from, _) | DragState::DragInProgress(drag_from) => {
+                DragState::DragOverInProgress(drag_from.clone(), DragOver { target, index })
+            },
+            _ => DragState::NoDrag,
+        };
+
+        should_render
     }
 }
 
@@ -192,7 +255,7 @@ pub fn dragenter_helper(callback: impl Fn() + 'static, target: NodeRef) -> Callb
                 if event.related_target().is_none() {
                     target
                         .cast::<HtmlElement>()
-                        .into_jserror()?
+                        .into_apierror()?
                         .dataset()
                         .set("safaridragleave", "true")?;
                 }
@@ -243,9 +306,9 @@ pub fn dragleave_helper(callback: impl Fn() + 'static, drag_ref: NodeRef) -> Cal
                 {
                     related_target = Some(
                         related_target
-                            .into_jserror()?
+                            .into_apierror()?
                             .parent_node()
-                            .into_jserror()?
+                            .into_apierror()?
                             .dyn_ref::<ShadowRoot>()
                             .ok_or_else(|| JsValue::from("Chrome drag/drop bug detection failed"))?
                             .host()
@@ -253,13 +316,17 @@ pub fn dragleave_helper(callback: impl Fn() + 'static, drag_ref: NodeRef) -> Cal
                     )
                 }
 
-                let current_target = drag_ref.cast::<HtmlElement>().into_jserror()?;
+                let current_target = drag_ref.cast::<HtmlElement>().unwrap();
                 match related_target {
                     Some(ref related) => {
-                        if !current_target.contains(Some(related)) {
+                        // Due to virtual dom these events sometimes fire after
+                        // the node is removed ...
+                        if !current_target.contains(Some(related))
+                            && related.parent_element().is_some()
+                        {
                             callback();
                         }
-                    }
+                    },
                     None => {
                         // Safari (OSX and iOS) don't set `relatedTarget`, so we need to
                         // read a memoized value from the `"dragenter"` event.
@@ -269,7 +336,7 @@ pub fn dragleave_helper(callback: impl Fn() + 'static, drag_ref: NodeRef) -> Cal
                         } else {
                             callback();
                         }
-                    }
+                    },
                 };
             })
         }
@@ -286,7 +353,7 @@ pub struct DragDropContainer {
 impl DragDropContainer {
     pub fn new<F: Fn() + 'static, G: Fn() + 'static>(ondragenter: F, ondragleave: G) -> Self {
         let noderef = NodeRef::default();
-        DragDropContainer {
+        Self {
             dragenter: dragenter_helper(ondragenter, noderef.clone()),
             dragleave: dragleave_helper(ondragleave, noderef.clone()),
             noderef,
