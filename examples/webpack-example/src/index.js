@@ -1,37 +1,36 @@
-/******************************************************************************
- *
- * Copyright (c) 2018, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
-
-import perspective from "@finos/perspective";
-
-import "@finos/perspective-viewer";
-import "@finos/perspective-viewer-datagrid";
-import "@finos/perspective-viewer-d3fc/bar";
-
-import "@finos/perspective-viewer/dist/css/material-dark.css";
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 import "./index.css";
+import superstore from "superstore-arrow/superstore.lz4.arrow";
 
-const worker = perspective.shared_worker();
+import "@finos/perspective-viewer/dist/css/themes.css";
 
-// superstore.arrow located in node_modules/superstore-arrow/ and it's
-// configured by 'devServer' in 'webpack.config.js'
-// const req = fetch("./superstore.arrow");
+import "@finos/perspective-viewer-datagrid";
+import "@finos/perspective-viewer-d3fc/bar";
+import perspective from "@finos/perspective";
+import perspective_viewer from "@finos/perspective-viewer";
+import * as SERVER_WASM from "@finos/perspective/dist/wasm/perspective-server.wasm";
+import * as CLIENT_WASM from "@finos/perspective-viewer/dist/wasm/perspective-viewer.wasm";
 
-window.addEventListener("DOMContentLoaded", async () => {
-    const viewer = document.createElement("perspective-viewer");
-    document.body.append(viewer);
+await Promise.all([
+    perspective.init_server(SERVER_WASM),
+    perspective_viewer.init_client(CLIENT_WASM),
+]);
 
-    // const resp = await req;
-    // const buffer = await resp.arrayBuffer();
-    const table = worker.table({x: [1, 2, 3, 4, 5]});
+const worker = await perspective.worker();
+const viewer = document.createElement("perspective-viewer");
+document.body.append(viewer);
 
-    viewer.load(table);
-
-    window.viewer = viewer;
-});
+const table = worker.table(superstore);
+viewer.load(table);
+window.viewer = viewer;

@@ -1,10 +1,14 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 //! `Renderer` owns the JavaScript Custom Element plugin, as well as
 //! associated state such as column restrictions and `plugin_config`
@@ -19,28 +23,31 @@ mod plugin_store;
 mod registry;
 mod render_timer;
 
+use std::cell::{Ref, RefCell};
+use std::collections::HashMap;
+use std::future::Future;
+use std::ops::Deref;
+use std::pin::Pin;
+use std::rc::Rc;
+
+use futures::future::{join_all, select_all};
+use perspective_client::ViewWindow;
+use perspective_js::json;
+use perspective_js::utils::ApiResult;
+use wasm_bindgen::prelude::*;
+use web_sys::*;
+use yew::html::ImplicitClone;
+
 use self::activate::*;
 use self::limits::*;
 use self::plugin_store::*;
 pub use self::registry::*;
 use self::render_timer::*;
 use crate::config::*;
-use crate::js::perspective::*;
 use crate::js::plugin::*;
+use crate::presentation::ColumnConfigMap;
 use crate::session::*;
 use crate::utils::*;
-use crate::*;
-
-use futures::future::join_all;
-use futures::future::select_all;
-use std::cell::{Ref, RefCell};
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::*;
 
 #[derive(Clone)]
 pub struct Renderer(Rc<RendererData>);
@@ -50,8 +57,9 @@ pub struct RendererData {
     plugin_data: RefCell<RendererMutData>,
     draw_lock: DebounceMutex,
     pub plugin_changed: PubSub<JsPerspectiveViewerPlugin>,
-    pub limits_changed: PubSub<RenderLimits>,
-    pub settings_open_changed: PubSub<bool>,
+    pub render_limits_changed: PubSub<(bool, RenderLimits)>,
+    pub style_changed: PubSub<()>,
+    pub reset_changed: PubSub<()>,
 }
 
 /// Mutable state
@@ -61,13 +69,14 @@ pub struct RendererMutData {
     plugin_store: PluginStore,
     plugins_idx: Option<usize>,
     timer: MovingWindowRenderTimer,
-    is_settings_open: bool,
+    selection: Option<ViewWindow>,
 }
 
 type RenderLimits = (usize, usize, Option<usize>, Option<usize>);
 
 impl Deref for Renderer {
     type Target = RendererData;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -79,15 +88,21 @@ impl PartialEq for Renderer {
     }
 }
 
+impl ImplicitClone for Renderer {}
+
 impl Deref for RendererData {
     type Target = RefCell<RendererMutData>;
+
     fn deref(&self) -> &Self::Target {
         &self.plugin_data
     }
 }
 
-type TaskResult = Result<JsValue, JsValue>;
+type TaskResult = ApiResult<JsValue>;
 type TimeoutTask<'a> = Pin<Box<dyn Future<Output = Option<TaskResult>> + 'a>>;
+
+/// How long to await a call to the plugin's `draw()` before resizing.
+static PRESIZE_TIMEOUT: i32 = 500;
 
 impl Renderer {
     pub fn new(viewer_elem: &HtmlElement) -> Self {
@@ -97,24 +112,27 @@ impl Renderer {
                 metadata: ViewConfigRequirements::default(),
                 plugin_store: PluginStore::default(),
                 plugins_idx: None,
+                selection: None,
                 timer: MovingWindowRenderTimer::default(),
-                is_settings_open: false,
             }),
             draw_lock: Default::default(),
             plugin_changed: Default::default(),
-            settings_open_changed: Default::default(),
-            limits_changed: Default::default(),
+            render_limits_changed: Default::default(),
+            style_changed: Default::default(),
+            reset_changed: Default::default(),
         }))
     }
 
-    pub async fn reset(&self) {
+    pub async fn reset(&self, columns_config: Option<&ColumnConfigMap>) -> ApiResult<()> {
         self.0.borrow_mut().plugins_idx = None;
         if let Ok(plugin) = self.get_active_plugin() {
-            plugin.restore(&js_object!());
+            plugin.restore(&json!({}), columns_config)?;
         }
+
+        Ok(())
     }
 
-    pub fn delete(&self) -> Result<(), JsValue> {
+    pub fn delete(&self) -> ApiResult<()> {
         self.get_active_plugin()?.delete();
         Ok(())
     }
@@ -130,7 +148,7 @@ impl Renderer {
     }
 
     /// Return all plugin names, whether they are active or not.
-    pub fn get_all_plugin_names(&self) -> Vec<String> {
+    pub fn get_all_plugin_categories(&self) -> HashMap<String, Vec<String>> {
         self.0.borrow_mut().plugin_store.plugin_records().clone()
     }
 
@@ -138,49 +156,32 @@ impl Renderer {
     /// has been selected will cause the default (first) plugin to be
     /// selected, and doing so when no plugins have been registered is an
     /// error.
-    pub fn get_active_plugin(&self) -> Result<JsPerspectiveViewerPlugin, JsValue> {
+    pub fn get_active_plugin(&self) -> ApiResult<JsPerspectiveViewerPlugin> {
         if self.0.borrow().plugins_idx.is_none() {
             self.set_plugin(Some(&PLUGIN_REGISTRY.default_plugin_name()))?;
         }
 
         let idx = self.0.borrow().plugins_idx.unwrap_or(0);
         let result = self.0.borrow_mut().plugin_store.plugins().get(idx).cloned();
-        result.ok_or_else(|| JsValue::from("No Plugin"))
+        Ok(result.ok_or("No Plugin")?)
     }
 
     /// Gets a specific `JsPerspectiveViewerPlugin` by name.
     ///
     /// # Arguments
     /// - `name` The plugin name to lookup.
-    pub fn get_plugin(&self, name: &str) -> Result<JsPerspectiveViewerPlugin, JsValue> {
+    pub fn get_plugin(&self, name: &str) -> ApiResult<JsPerspectiveViewerPlugin> {
         let idx = self.find_plugin_idx(name);
         let idx = idx.ok_or_else(|| JsValue::from(format!("No Plugin `{}`", name)))?;
         let result = self.0.borrow_mut().plugin_store.plugins().get(idx).cloned();
         Ok(result.unwrap())
     }
 
-    pub fn is_settings_open(&self) -> bool {
-        self.0.borrow().is_settings_open
-    }
-
-    pub fn set_settings_open(&self, open: Option<bool>) -> Result<bool, JsValue> {
-        let open_state = open.unwrap_or_else(|| !self.0.borrow().is_settings_open);
-        if self.0.borrow().is_settings_open != open_state {
-            self.0.borrow_mut().is_settings_open = open_state;
-            self.0
-                .borrow()
-                .viewer_elem
-                .toggle_attribute_with_force("settings", open_state)?;
-
-            self.settings_open_changed.emit_all(open_state);
-        }
-
-        Ok(open_state)
-    }
-
-    pub async fn restyle_all(&self, view: &JsPerspectiveView) -> Result<JsValue, JsValue> {
+    pub async fn restyle_all(&self, view: &perspective_client::View) -> ApiResult<JsValue> {
         let plugins = self.get_all_plugins();
-        let tasks = plugins.iter().map(|plugin| plugin.restyle(view));
+        let tasks = plugins
+            .iter()
+            .map(|plugin| plugin.restyle(view.clone().into()));
 
         join_all(tasks)
             .await
@@ -189,8 +190,16 @@ impl Renderer {
             .map(|_| JsValue::UNDEFINED)
     }
 
-    pub fn set_throttle(&mut self, val: Option<f64>) {
+    pub fn set_throttle(&self, val: Option<f64>) {
         self.0.borrow_mut().timer.set_throttle(val);
+    }
+
+    pub fn set_selection(&self, window: Option<ViewWindow>) {
+        self.borrow_mut().selection = window
+    }
+
+    pub fn get_selection(&self) -> Option<ViewWindow> {
+        self.borrow().selection.clone()
     }
 
     pub fn disable_active_plugin_render_warning(&self) {
@@ -203,7 +212,7 @@ impl Renderer {
     ///
     /// # Arguments
     /// - `update` The `PluginUpdate` behavior to set.
-    pub fn update_plugin(&self, update: &PluginUpdate) -> Result<bool, JsValue> {
+    pub fn update_plugin(&self, update: &PluginUpdate) -> ApiResult<bool> {
         match update {
             PluginUpdate::Missing => Ok(false),
             PluginUpdate::SetDefault => self.set_plugin(None),
@@ -211,12 +220,12 @@ impl Renderer {
         }
     }
 
-    fn set_plugin(&self, name: Option<&str>) -> Result<bool, JsValue> {
+    fn set_plugin(&self, name: Option<&str>) -> ApiResult<bool> {
         let default_plugin_name = PLUGIN_REGISTRY.default_plugin_name();
         let name = name.unwrap_or(default_plugin_name.as_str());
         let idx = self
             .find_plugin_idx(name)
-            .ok_or_else(|| JsValue::from(format!("Unkown plugin '{}'", name)))?;
+            .ok_or_else(|| JsValue::from(format!("Unknown plugin '{}'", name)))?;
 
         let changed = !matches!(
             self.0.borrow().plugins_idx,
@@ -227,26 +236,23 @@ impl Renderer {
             self.borrow_mut().plugins_idx = Some(idx);
             let plugin: JsPerspectiveViewerPlugin = self.get_active_plugin()?;
             self.borrow_mut().metadata = plugin.get_requirements()?;
-            self.plugin_changed.emit_all(plugin);
+            self.plugin_changed.emit(plugin);
         }
 
         Ok(changed)
     }
 
-    pub async fn with_lock<T>(
-        self,
-        task: impl Future<Output = Result<T, JsValue>>,
-    ) -> Result<T, JsValue> {
+    pub async fn with_lock<T>(self, task: impl Future<Output = ApiResult<T>>) -> ApiResult<T> {
         let draw_mutex = self.draw_lock();
         draw_mutex.lock(task).await
     }
 
-    pub async fn resize(&self) -> Result<(), JsValue> {
+    pub async fn resize(&self) -> ApiResult<()> {
         let draw_mutex = self.draw_lock();
         let timer = self.render_timer();
         draw_mutex
             .debounce(async {
-                set_timeout(timer.get_avg()).await?;
+                set_timeout(timer.get_throttle()).await?;
                 let jsplugin = self.get_active_plugin()?;
                 jsplugin.resize().await?;
                 Ok(())
@@ -254,26 +260,26 @@ impl Renderer {
             .await
     }
 
-    pub async fn draw(
-        &self,
-        session: impl Future<Output = Result<&Session, JsValue>>,
-    ) -> Result<(), JsValue> {
+    /// This will take a future which _should_ create a new view and then will
+    /// draw it.
+    pub async fn draw(&self, session: impl Future<Output = ApiResult<&Session>>) -> ApiResult<()> {
         self.draw_plugin(session, false).await
     }
 
-    pub async fn update(&self, session: &Session) -> Result<(), JsValue> {
+    /// This will update an already existing view
+    pub async fn update(&self, session: &Session) -> ApiResult<()> {
         self.draw_plugin(async { Ok(session) }, true).await
     }
 
     async fn draw_plugin(
         &self,
-        session: impl Future<Output = Result<&Session, JsValue>>,
+        session: impl Future<Output = ApiResult<&Session>>,
         is_update: bool,
-    ) -> Result<(), JsValue> {
+    ) -> ApiResult<()> {
         let timer = self.render_timer();
         let task = async move {
             if is_update {
-                set_timeout(timer.get_avg()).await?;
+                set_timeout(timer.get_throttle()).await?;
             }
 
             if let Some(view) = session.await?.get_view() {
@@ -291,17 +297,17 @@ impl Renderer {
         }
     }
 
-    async fn draw_view(&self, view: &JsPerspectiveView, is_update: bool) -> Result<(), JsValue> {
+    async fn draw_view(&self, view: &perspective_client::View, is_update: bool) -> ApiResult<()> {
         let plugin = self.get_active_plugin()?;
         let meta = self.metadata().clone();
         let limits = get_row_and_col_limits(view, &meta).await?;
-        self.limits_changed.emit_all(limits);
+        self.render_limits_changed.emit((is_update, limits));
         let viewer_elem = &self.0.borrow().viewer_elem.clone();
         if is_update {
-            let task = plugin.update(view, limits.2, limits.3, false);
+            let task = plugin.update(view.clone().into(), limits.2, limits.3, false);
             activate_plugin(viewer_elem, &plugin, task).await
         } else {
-            let task = plugin.draw(view, limits.2, limits.3, false);
+            let task = plugin.draw(view.clone().into(), limits.2, limits.3, false);
             activate_plugin(viewer_elem, &plugin, task).await
         }
     }
@@ -313,24 +319,24 @@ impl Renderer {
     pub async fn presize(
         &self,
         open: bool,
-        on_toggle: impl Future<Output = Result<(), JsValue>>,
-    ) -> Result<JsValue, JsValue> {
-        let task = self.resize_with_timeout(open);
+        panel_task: impl Future<Output = ApiResult<()>>,
+    ) -> ApiResult<JsValue> {
+        let render_task = self.resize_with_timeout(open);
         let result = if open {
-            on_toggle.await?;
-            task.await
+            panel_task.await?;
+            render_task.await
         } else {
-            let result = task.await;
-            on_toggle.await?;
+            let result = render_task.await;
+            panel_task.await?;
             result
         };
 
         match result {
             Ok(x) => x,
             Err(cont) => {
-                web_sys::console::log_1(&"Presize took longer than 500ms".into());
+                tracing::warn!("Presize took longer than {}ms", PRESIZE_TIMEOUT);
                 cont.await.unwrap()
-            }
+            },
         }
     }
 
@@ -350,7 +356,7 @@ impl Renderer {
         let tasks: [TimeoutTask<'_>; 2] = [
             Box::pin(async move { Some(draw_lock.lock(task).await) }),
             Box::pin(async {
-                set_timeout(500).await.unwrap();
+                set_timeout(PRESIZE_TIMEOUT).await.unwrap();
                 None
             }),
         ];
@@ -377,7 +383,7 @@ impl Renderer {
         self.draw_lock.clone()
     }
 
-    fn render_timer(&self) -> MovingWindowRenderTimer {
+    pub fn render_timer(&self) -> MovingWindowRenderTimer {
         self.0.borrow().timer.clone()
     }
 
