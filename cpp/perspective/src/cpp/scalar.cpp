@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #include <perspective/first.h>
 #include <perspective/base.h>
@@ -15,7 +18,7 @@
 #include <cstring>
 #include <cstdio>
 #include <functional>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <vector>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <sstream>
@@ -78,14 +81,17 @@ t_tscalar::is_of_type(unsigned char t) const {
 
 bool
 t_tscalar::operator==(const t_tscalar& rhs) const {
-    if (m_type != rhs.m_type || m_status != rhs.m_status)
+    if (m_type != rhs.m_type || m_status != rhs.m_status) {
         return false;
+    }
 
-    if (m_type == DTYPE_BOOL)
+    if (m_type == DTYPE_BOOL) {
         return get<bool>() == rhs.get<bool>();
+    }
 
-    if (m_type != DTYPE_STR)
+    if (m_type != DTYPE_STR) {
         return m_data.m_uint64 == rhs.m_data.m_uint64;
+    }
 
     return strcmp(get_char_ptr(), rhs.get_char_ptr()) == 0;
 }
@@ -222,11 +228,11 @@ t_tscalar::operator-() const {
 t_tscalar
 t_tscalar::operator+(const t_tscalar& other) const {BINARY_OPERATOR_BODY(+)}
 
-t_tscalar t_tscalar::operator-(const t_tscalar& other) const {
-    BINARY_OPERATOR_BODY(-)}
+t_tscalar t_tscalar::operator-(const t_tscalar& other
+) const {BINARY_OPERATOR_BODY(-)}
 
-t_tscalar t_tscalar::operator*(const t_tscalar& other) const {
-    BINARY_OPERATOR_BODY(*)}
+t_tscalar t_tscalar::operator*(const t_tscalar& other
+) const {BINARY_OPERATOR_BODY(*)}
 
 t_tscalar t_tscalar::operator/(const t_tscalar& other) const {
     t_tscalar rval;
@@ -403,6 +409,35 @@ t_tscalar::operator%=(const t_tscalar& rhs) {
     return *this;
 }
 
+t_tscalar::operator std::size_t() const {
+    switch (get_dtype()) {
+        case perspective::t_dtype::DTYPE_INT64:
+            return static_cast<std::size_t>(get<std::int64_t>());
+        case perspective::t_dtype::DTYPE_INT32:
+            return static_cast<std::size_t>(get<std::int32_t>());
+        case perspective::t_dtype::DTYPE_INT16:
+            return static_cast<std::size_t>(get<std::int16_t>());
+        case perspective::t_dtype::DTYPE_INT8:
+            return static_cast<std::size_t>(get<std::int8_t>());
+        case perspective::t_dtype::DTYPE_UINT64:
+            return static_cast<std::size_t>(get<std::uint64_t>());
+        case perspective::t_dtype::DTYPE_UINT32:
+            return static_cast<std::size_t>(get<std::uint32_t>());
+        case perspective::t_dtype::DTYPE_UINT16:
+            return static_cast<std::size_t>(get<std::uint16_t>());
+        case perspective::t_dtype::DTYPE_UINT8:
+            return static_cast<std::size_t>(get<std::uint8_t>());
+        case perspective::t_dtype::DTYPE_FLOAT64:
+            return static_cast<std::size_t>(get<double>());
+        case perspective::t_dtype::DTYPE_FLOAT32:
+            return static_cast<std::size_t>(get<float>());
+        default:
+            return std::numeric_limits<std::size_t>::max();
+    }
+
+    return std::numeric_limits<std::size_t>::max();
+}
+
 t_tscalar
 t_tscalar::add_typesafe(const t_tscalar& rhs) const {
     t_tscalar rval;
@@ -505,7 +540,7 @@ t_tscalar::canonical(t_dtype dtype) {
             rval.set(t_time(0));
         } break;
         case DTYPE_BOOL: {
-            rval.set(bool(0));
+            rval.set(false);
         } break;
         case DTYPE_NONE: {
             // handled trivially
@@ -513,9 +548,7 @@ t_tscalar::canonical(t_dtype dtype) {
         case DTYPE_STR: {
             rval.m_type = DTYPE_STR;
         } break;
-        case DTYPE_OBJECT: {
-            rval.set(nullptr);
-        } break;
+        case DTYPE_OBJECT:
         default: {
             PSP_COMPLAIN_AND_ABORT("Found unknown dtype.");
         }
@@ -612,7 +645,7 @@ t_tscalar::set(bool v) {
 void
 t_tscalar::set(const char* v) {
     m_type = DTYPE_STR;
-
+#ifdef PSP_SSO_SCALAR
     if (can_store_inplace(v)) {
         strncpy(reinterpret_cast<char*>(&m_data), v, SCALAR_INPLACE_LEN);
         m_inplace = true;
@@ -620,7 +653,9 @@ t_tscalar::set(const char* v) {
         m_data.m_charptr = v;
         m_inplace = false;
     }
-
+#else
+    m_data.m_charptr = v;
+#endif
     m_status = STATUS_VALID;
 }
 
@@ -649,9 +684,11 @@ t_tscalar::set(const t_none v) {
 void
 t_tscalar::set(const t_tscalar v) {
     m_type = v.m_type;
-    memcpy(&m_data, &(v.m_data), SCALAR_INPLACE_LEN);
+    memcpy(&m_data, &(v.m_data), sizeof(t_scalar_u));
     m_status = v.m_status;
+#ifdef PSP_SSO_SCALAR
     m_inplace = v.m_inplace;
+#endif
 }
 
 void
@@ -665,8 +702,9 @@ t_tscalar::abs() const {
     rval.clear();
     rval.m_type = m_type;
 
-    if (!is_valid())
+    if (!is_valid()) {
         return rval;
+    }
 
     switch (m_type) {
         case DTYPE_INT64: {
@@ -711,8 +749,9 @@ t_tscalar::negate() const {
     rval.clear();
     rval.m_type = m_type;
 
-    if (!is_valid())
+    if (!is_valid()) {
         return rval;
+    }
 
     switch (m_type) {
         case DTYPE_INT64: {
@@ -760,14 +799,17 @@ t_tscalar::add(const t_tscalar& other) const {
     rval.clear();
     rval.m_type = m_type;
 
-    if (!other.is_valid())
+    if (!other.is_valid()) {
         return *this;
+    }
 
-    if (!is_valid())
+    if (!is_valid()) {
         return other;
+    }
 
-    if (m_type != other.m_type)
+    if (m_type != other.m_type) {
         return rval;
+    }
 
     if (m_type == DTYPE_NONE) {
         rval.set(other);
@@ -824,14 +866,17 @@ t_tscalar::difference(const t_tscalar& other) const {
     rval.clear();
     rval.m_type = m_type;
 
-    if (!other.is_valid())
+    if (!other.is_valid()) {
         return *this;
+    }
 
-    if (!is_valid())
+    if (!is_valid()) {
         return other.negate();
+    }
 
-    if (m_type != other.m_type)
+    if (m_type != other.m_type) {
         return rval;
+    }
 
     if (m_type == DTYPE_NONE) {
         rval.set(other.negate());
@@ -923,14 +968,17 @@ t_tscalar::is_floating_point() const {
 
 bool
 t_tscalar::is_signed() const {
-    return (m_type == DTYPE_INT64 || m_type == DTYPE_INT32
-        || m_type == DTYPE_INT16 || m_type == DTYPE_INT8);
+    return (
+        m_type == DTYPE_INT64 || m_type == DTYPE_INT32 || m_type == DTYPE_INT16
+        || m_type == DTYPE_INT8
+    );
 }
 
 bool
 t_tscalar::as_bool() const {
-    if (m_status != STATUS_VALID)
+    if (m_status != STATUS_VALID) {
         return false;
+    }
 
     switch (m_type) {
         case DTYPE_INT64: {
@@ -976,15 +1024,13 @@ t_tscalar::as_bool() const {
             return bool(false);
         } break;
         case DTYPE_STR: {
-            return m_data.m_charptr != 0;
+            return m_data.m_charptr != nullptr;
         } break;
-        case DTYPE_OBJECT: {
-            return bool(get<std::uint64_t>());
-        } break;
+        case DTYPE_OBJECT:
         default: {
 #ifdef PSP_DEBUG
             std::cout << __FILE__ << ":" << __LINE__ << " Reached unknown type "
-                      << m_type << std::endl;
+                      << m_type << "\n";
 #endif
         }
     }
@@ -993,14 +1039,15 @@ t_tscalar::as_bool() const {
 
 std::string
 t_tscalar::to_string(bool for_expr) const {
-    if (m_status != STATUS_VALID)
-        return std::string("null");
+    if (m_status != STATUS_VALID) {
+        return {"null"};
+    }
 
     std::stringstream ss;
 
     switch (m_type) {
         case DTYPE_NONE: {
-            return std::string("");
+            return {""};
         } break;
         case DTYPE_INT64: {
             ss << get<std::int64_t>();
@@ -1014,7 +1061,6 @@ t_tscalar::to_string(bool for_expr) const {
             ss << get<std::int16_t>();
             return ss.str();
         } break;
-        case DTYPE_OBJECT:
         case DTYPE_UINT64: {
             // treat object pointers as unsigned 64 bit ints
             ss << get<std::uint64_t>();
@@ -1041,11 +1087,16 @@ t_tscalar::to_string(bool for_expr) const {
                 auto d = get<t_date>();
                 ss << "date(" << d.year() << ", " << d.month() << ", "
                    << d.day() << ")";
-            } else {
-                ss << get<t_date>();
-            }
 
-            return ss.str();
+                return ss.str();
+            }
+            t_date date_val = get<t_date>();
+            tm t = date_val.get_tm();
+            time_t epoch_delta = mktime(&t);
+            std::chrono::milliseconds timestamp(epoch_delta * 1000);
+            date::sys_time<std::chrono::milliseconds> ts(timestamp);
+            return date::format("%F", ts);
+
         } break;
         case DTYPE_BOOL: {
             ss << std::boolalpha << get<bool>();
@@ -1065,35 +1116,14 @@ t_tscalar::to_string(bool for_expr) const {
             // local time and not UTC.
             std::chrono::milliseconds timestamp(to_int64());
             date::sys_time<std::chrono::milliseconds> ts(timestamp);
-            std::time_t temp = std::chrono::system_clock::to_time_t(ts);
-            std::tm* t = std::localtime(&temp);
-
-            // use a mix of strftime and date::format
-            std::string buffer;
-            buffer.resize(64);
-
-            // write y-m-d h:m in local time into buffer, and if successful
-            // write the rest of the date, otherwise print the date in UTC.
-            std::size_t len
-                = strftime(&buffer[0], buffer.size(), "%Y-%m-%d %H:%M:", t);
-            if (len > 0) {
-                buffer.resize(len);
-                ss << buffer;
-                ss << date::format(
-                    "%S", ts); // represent second and millisecond
-            } else {
-                std::cerr << to_int64() << " failed strftime" << std::endl;
-                ss << date::format("%Y-%m-%d %H:%M:%S UTC", ts);
-            }
-
-            return ss.str();
+            return date::format("%F %T", ts);
         } break;
         case DTYPE_STR: {
             if (for_expr) {
                 ss << "'";
             }
 
-            if (!m_data.m_charptr) {
+            if (m_data.m_charptr == nullptr) {
                 if (for_expr) {
                     ss << "'";
                 }
@@ -1107,11 +1137,12 @@ t_tscalar::to_string(bool for_expr) const {
             }
             return ss.str();
         } break;
+        case DTYPE_OBJECT:
         default: {
             PSP_COMPLAIN_AND_ABORT("Unrecognized dtype");
         }
     }
-    return std::string("null");
+    return {"null"};
 }
 
 double
@@ -1154,7 +1185,7 @@ t_tscalar::to_double() const {
             return get<std::int64_t>();
         } break;
         case DTYPE_BOOL: {
-            return get<bool>();
+            return static_cast<double>(get<bool>());
         } break;
         case DTYPE_NONE:
         default: {
@@ -1167,6 +1198,10 @@ t_tscalar::to_double() const {
 
 t_tscalar
 t_tscalar::coerce_numeric_dtype(t_dtype dtype) const {
+    if (dtype == m_type) {
+        return *this;
+    }
+
     switch (dtype) {
         case DTYPE_INT64: {
             return coerce_numeric<std::int64_t>();
@@ -1249,7 +1284,7 @@ t_tscalar::to_int64() const {
             return get<std::int64_t>();
         } break;
         case DTYPE_BOOL: {
-            return get<bool>();
+            return static_cast<std::int64_t>(get<bool>());
         } break;
         case DTYPE_NONE:
         default: {
@@ -1300,7 +1335,7 @@ t_tscalar::to_int32() const {
             return get<std::int64_t>();
         } break;
         case DTYPE_BOOL: {
-            return get<bool>();
+            return static_cast<std::int32_t>(get<bool>());
         } break;
         case DTYPE_NONE:
         default: {
@@ -1351,12 +1386,9 @@ t_tscalar::to_uint64() const {
             return get<std::int64_t>();
         } break;
         case DTYPE_BOOL: {
-            return get<bool>();
+            return static_cast<std::uint64_t>(get<bool>());
         } break;
-        case DTYPE_OBJECT: {
-            // Interpret pointer as 64bit unsigned int
-            return get<std::uint64_t>();
-        } break;
+        case DTYPE_OBJECT:
         case DTYPE_NONE:
         default: {
             return 0;
@@ -1369,8 +1401,9 @@ t_tscalar::to_uint64() const {
 bool
 t_tscalar::begins_with(const t_tscalar& other) const {
     if (m_status != STATUS_VALID || m_type != DTYPE_STR
-        || other.m_type != DTYPE_STR)
+        || other.m_type != DTYPE_STR) {
         return false;
+    }
     std::string sstr = to_string();
     std::string ostr = other.to_string();
     std::string_to_lower(sstr);
@@ -1381,8 +1414,9 @@ t_tscalar::begins_with(const t_tscalar& other) const {
 bool
 t_tscalar::ends_with(const t_tscalar& other) const {
     if (m_status != STATUS_VALID || m_type != DTYPE_STR
-        || other.m_type != DTYPE_STR)
+        || other.m_type != DTYPE_STR) {
         return false;
+    }
     std::string sstr = to_string();
     std::string ostr = other.to_string();
     std::string_to_lower(sstr);
@@ -1394,8 +1428,9 @@ t_tscalar::ends_with(const t_tscalar& other) const {
 bool
 t_tscalar::contains(const t_tscalar& other) const {
     if (m_status != STATUS_VALID || m_type != DTYPE_STR
-        || other.m_type != DTYPE_STR)
+        || other.m_type != DTYPE_STR) {
         return false;
+    }
     std::string sstr = to_string();
     std::string ostr = other.to_string();
     std::string_to_lower(sstr);
@@ -1519,7 +1554,7 @@ t_tscalar::get() const {
 template <>
 t_none
 t_tscalar::get() const {
-    return t_none();
+    return {};
 }
 
 t_dtype
@@ -1538,7 +1573,7 @@ t_tscalar::cmp(t_filter_op op, const t_tscalar& other) const {
         } break;
         case FILTER_OP_LTEQ: {
             return (m_status == STATUS_VALID && other.m_status == STATUS_VALID
-                       && value < other)
+                    && value < other)
                 || other == value;
         } break;
         case FILTER_OP_GT: {
@@ -1547,7 +1582,7 @@ t_tscalar::cmp(t_filter_op op, const t_tscalar& other) const {
         } break;
         case FILTER_OP_GTEQ: {
             return (m_status == STATUS_VALID && other.m_status == STATUS_VALID
-                       && value > other)
+                    && value > other)
                 || other == value;
         } break;
         case FILTER_OP_EQ: {
@@ -1581,11 +1616,15 @@ t_tscalar::cmp(t_filter_op op, const t_tscalar& other) const {
 
 const char*
 t_tscalar::get_char_ptr() const {
-    if (is_inplace())
+#ifdef PSP_SSO_SCALAR
+    if (is_inplace()) {
         return m_data.m_inplace_char;
+    }
+#endif
     return m_data.m_charptr;
 }
 
+#ifdef PSP_SSO_SCALAR
 bool
 t_tscalar::is_inplace() const {
     return m_inplace;
@@ -1597,11 +1636,19 @@ t_tscalar::can_store_inplace(const char* s) {
 }
 
 bool
+t_tscalar::can_store_inplace(const std::string& s) {
+    return s.size() + 1 <= static_cast<size_t>(SCALAR_INPLACE_LEN);
+}
+#endif
+
+bool
 t_tscalar::is_nan() const {
-    if (m_type == DTYPE_FLOAT64)
-        return std::isnan(get<double>());
-    if (m_type == DTYPE_FLOAT32)
-        return std::isnan(get<float>());
+    if (m_type == DTYPE_FLOAT64) {
+        return std::isnan(get<double>()) || std::isinf(get<double>());
+    }
+    if (m_type == DTYPE_FLOAT32) {
+        return std::isnan(get<float>()) || std::isinf(get<float>());
+    }
     return false;
 }
 
@@ -1618,9 +1665,11 @@ mknull(t_dtype dtype) {
     rval.m_data.m_uint64 = 0;
     rval.m_status = STATUS_INVALID;
     rval.m_type = dtype;
+#ifdef PSP_SSO_SCALAR
     if (dtype == DTYPE_STR) {
         rval.m_inplace = true;
     }
+#endif
     return rval;
 }
 
@@ -1637,7 +1686,7 @@ t_tscalar::coerce_numeric<bool>() const {
     t_tscalar rv;
 
     if (m_type == DTYPE_STR) {
-        auto v = get<const char*>();
+        const auto* v = get<const char*>();
         std::string s1("True");
         std::string s2("true");
         std::string s3("TRUE");

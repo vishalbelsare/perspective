@@ -1,45 +1,85 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
-
-@import "./monaco.less";
-@import "./split-panel.less";
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 :host {
-    position: fixed;
-    z-index: 10000;
-    outline: none;
-    font-family: Arial;
-    font-size: 12px;
-    font-weight: 300;
-    border: inherit;
-    box-shadow: 0 2px 4px 0 rgb(0 0 0 / 10%);
-    user-select: none;
-    background-color: white;
-
     #editor-container {
+        display: flex;
+        flex-direction: column;
         min-width: 0px;
+        border: 1px solid var(--inactive--color);
+        background-color: var(--plugin--background);
+        border-radius: 3px;
+        overflow: hidden;
+
+        .error {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 1.5em;
+            color: var(--error--color);
+            top: 0.5em;
+            left: 0.5em;
+            position: absolute;
+            font-size: 10px;
+            width: calc(100% - 24px);
+        }
+
+        &.disabled {
+            #textarea_editable,
+            #line_numbers,
+            #editor {
+                background-color: var(--inactive--border-color);
+            }
+        }
     }
 
-    .split-panel.orient-vertical > .split-panel-divider {
-        margin-bottom: -6px;
+    #attributes-expr {
+        flex: 1 1 auto;
+        margin-top: 1px;
+        display: flex;
+        flex-direction: column;
     }
 
-    .split-panel.orient-vertical
-        > .split-panel-child:not(.is-width-override)
-        #editor-container {
-        height: 242px;
+    #attribtues-tab .split-panel-child {
+        max-height: 400px;
+        flex-direction: column;
     }
 
-    .split-panel:not(.orient-vertical)
-        > .split-panel-child:not(.is-width-override)
-        #editor-container {
-        width: 400px;
+    #expression-editor {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #editor-alias-container {
+        flex: 0 0 auto;
+        margin-bottom: 2px;
+    }
+
+    .item_title {
+        margin-bottom: 3px;
+        margin-top: 4px;
+    }
+
+    input#expression-name {
+        padding-left: 8px;
+        color: inherit;
+
+        &:placeholder-shown {
+            background-color: transparent;
+        }
+    }
+
+    .split-panel.orient-vertical > .split-panel-child #editor-container {
+        height: calc(100% - 15px);
     }
 
     #horizontal-resize {
@@ -48,96 +88,65 @@
         bottom: 0;
         right: 0;
         width: 8px;
+
         &:hover {
             cursor: ew-resize;
             background: rgba(0, 0, 0, 0.05);
         }
     }
 
-    #monaco-container {
-        width: 100%;
-        height: calc(100% - 42px);
-        overflow: visible;
-        // margin-right: 8px;
-        &::-webkit-resizer {
-            appearance: var(--monaco-container--appearance, auto);
-        }
-    }
-    .monaco-hover {
-        background-color: white;
-    }
-
-    .monaco-editor {
-        padding-top: 6px;
-        .cursors-layer .cursor {
-            visibility: var(--monaco-cursor--visibility, inherit) !important;
-        }
-    }
-
     #psp-expression-editor-actions {
         display: flex;
+        gap: 0.333333em;
         justify-content: flex-end;
-        margin-left: 20px;
-        margin-top: 6px;
-        margin-right: 8px;
+        align-items: center;
+    }
+
+    #psp-expression-editor-meta {
+        display: flex;
+        flex: 0 0 24px;
+        flex-direction: column;
+        padding: 0.5em;
+        gap: 0.25em;
+        height: 24px;
+        position: relative;
+    }
+
+    #save-settings,
+    #danger-zone {
+        display: flex;
+        gap: 0.333333em;
+    }
+    #save-settings-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.333333em;
     }
 
     .psp-expression-editor__button {
+        flex: 1;
+        justify-content: center;
         font-family: inherit;
-        font-size: 14px;
-        border: none;
-        margin-left: 6px;
-        padding: 2px 5px;
+        font-size: 0.8333em;
+        text-transform: uppercase;
+        border: 1px solid var(--icon--color);
+        border-radius: 2px;
+        height: 24px;
+        padding: 2px 12px;
         display: flex;
         align-items: center;
+        background: none;
+        color: inherit;
 
-        &:hover {
+        &:not([disabled]):hover {
             cursor: pointer;
-            background-color: rgba(0, 0, 0, 0.05);
+            background-color: var(--icon--color);
+            color: var(--plugin--background);
         }
 
         &[disabled] {
             cursor: not-allowed;
-            opacity: 0.5;
-        }
-
-        &#psp-expression-editor-button-save,
-        &#psp-expression-editor-button-reset {
-            color: inherit;
-            font-family: inherit;
-            font-weight: 300;
-            font-size: 12px;
-            height: 36px;
-            opacity: 0.1;
-            background-color: inherit;
-            transition: background-color 0.2s;
-
-            &:not([disabled]) {
-                opacity: 1;
-            }
-
-            &:before {
-                margin-right: 6px;
-                font-size: 14px;
-                font-family: var(--button--font-family, inherit);
-            }
-
-            &:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-                transition: none;
-            }
-        }
-
-        &#psp-expression-editor-button-save {
-            margin-right: 12px;
-        }
-
-        &#psp-expression-editor-button-save:before {
-            content: var(--save-button-icon--content, "\1F4BE");
-        }
-
-        &#psp-expression-editor-button-reset:before {
-            content: var(--reset-button-icon--content, "\27F3");
+            opacity: 0.2;
         }
     }
 }

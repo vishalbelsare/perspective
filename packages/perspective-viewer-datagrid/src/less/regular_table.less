@@ -1,21 +1,118 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-@import (less) "./material.less";
-@import (less) "./mitered-headers.less";
-@import (less) "./row-hover.less";
-@import (less) "./column-plugin.less";
-
-@positive: #338dcd; // @blue300
-@negative: #ff5942; // @red300
+@import "./pro.less";
+@import "./mitered-headers.less";
+@import "./row-hover.less";
+@import "./sub-cell-scroll.less";
+@import "./scrollbar.less";
 
 // Row Selection
+
+@mixin icon {
+    background-repeat: no-repeat;
+    background-color: var(--icon--color);
+    content: "";
+    display: inline-block;
+    -webkit-mask-size: cover;
+    mask-size: cover;
+}
+
+perspective-viewer:not([settings]) {
+    @include settings-not-open;
+}
+
+:host-context(perspective-viewer:not([settings])) {
+    @include settings-not-open;
+}
+
+@mixin settings-not-open {
+    regular-table table tr.rt-autosize + tr th {
+        height: 0px;
+        span {
+            display: none;
+        }
+    }
+}
+
+@mixin settings-open {
+    .psp-menu-enabled {
+        padding: 0 6px;
+        font-size: 8px;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .psp-menu-enabled:hover,
+    tr:not(.rt-autosize) th.psp-menu-open {
+        color: var(--plugin--background);
+        background-color: var(--icon--color);
+        border-bottom-color: var(--icon--color);
+        cursor: pointer;
+    }
+
+    tr:not(.rt-autosize) th.psp-menu-open {
+        &:before {
+            @include icon;
+            height: 8px;
+            width: 10px;
+            -webkit-mask-image: var(--column-settings-icon--mask-image);
+            mask-image: var(--column-settings-icon--mask-image);
+            margin-right: 4px;
+            background-color: var(--plugin--background);
+        }
+    }
+
+    td.psp-menu-open {
+        box-shadow: inset -2px 0px 0px var(--icon--color),
+            inset 2px 0px 0px var(--icon--color);
+    }
+
+    tr:first-child td.psp-menu-open {
+        border-top-color: var(--icon--color) !important;
+    }
+
+    tr:last-child td.psp-menu-open {
+        box-shadow: inset -2px 0px 0px var(--icon--color),
+            inset 2px 0px 0px var(--icon--color),
+            inset 0px -2px 0px var(--icon--color);
+    }
+}
+
+perspective-viewer[settings] {
+    @include settings-open;
+}
+
+:host-context(perspective-viewer[settings]) {
+    @include settings-open;
+}
+
+@mixin viewer-table-styles {
+    regular-table table thead tr:last-child th {
+        border-bottom-width: 1px;
+        border-bottom-color: var(--inactive--border-color, #8b868045);
+    }
+}
+
+perspective-viewer {
+    @include viewer-table-styles;
+}
+
+:host-context(perspective-viewer) {
+    @include viewer-table-styles;
+}
+
+.psp-sort-enabled:hover {
+    cursor: pointer;
+}
 
 .psp-row-selected,
 :hover .psp-row-selected,
@@ -47,8 +144,16 @@ td:focus {
     outline-width: 1px;
 }
 
-perspective-viewer.dragging regular-table {
-    pointer-events: none;
+@mixin table-no-dragging {
+    regular-table {
+        pointer-events: none;
+    }
+}
+perspective-viewer.dragging {
+    @include table-no-dragging;
+}
+:host-context(perspective-viewer.dragging) {
+    @include table-no-dragging;
 }
 
 .psp-header-border:last-child {
@@ -56,31 +161,39 @@ perspective-viewer.dragging regular-table {
 }
 
 .psp-header-sort-desc:after {
-    font-family: var(--button--font-family, inherit);
-    font-size: 10px;
-    content: var(--sort-order-desc--content, "\2193");
+    @include icon;
+    width: 14px;
+    height: 12px;
+    -webkit-mask-image: var(--sort-desc-icon--mask-image);
+    mask-image: var(--sort-desc-icon--mask-image);
 }
 
 .psp-header-sort-asc:after {
-    font-family: var(--button--font-family, inherit);
-    font-size: 10px;
-    content: var(--sort-order-asc--content, "\2191");
+    @include icon;
+    width: 14px;
+    height: 12px;
+    -webkit-mask-image: var(--sort-asc-icon--mask-image);
+    mask-image: var(--sort-asc-icon--mask-image);
 }
 
 .psp-header-sort-col-desc:after {
-    font-family: var(--button--font-family, inherit);
-    font-size: 10px;
-    content: var(--sort-order-col-desc--content, "\2190");
+    @include icon;
+    width: 14px;
+    height: 12px;
+    -webkit-mask-image: var(--sort-col-desc-icon--mask-image);
+    mask-image: var(--sort-col-desc-icon--mask-image);
 }
 
 .psp-header-sort-col-asc:after {
-    font-family: var(--button--font-family, inherit);
-    font-size: 10px;
-    content: var(--sort-order-col-asc--content, "\2192");
+    @include icon;
+    width: 14px;
+    height: 12px;
+    -webkit-mask-image: var(--sort-col-asc-icon--mask-image);
+    mask-image: var(--sort-col-asc-icon--mask-image);
 }
 
 tbody th:last-of-type {
-    border-right: 1px solid #eaedef;
+    border-right: 1px solid var(--inactive--border-color, #8b868045);
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -88,7 +201,7 @@ tbody th:empty {
     background-image: linear-gradient(
         to right,
         transparent 9px,
-        #eee 10px,
+        var(--inactive--border-color, #eee) 10px,
         transparent 11px
     );
     background-repeat: no-repeat;
@@ -101,10 +214,9 @@ tbody th:empty {
     min-width: 0px;
 }
 .psp-tree-label:before {
-    color: #ccc;
+    color: var(--icon--color);
     font-family: var(--button--font-family, inherit);
     padding-right: 11px;
-    vertical-align: -1px;
 }
 .psp-tree-label-expand:before {
     content: var(--tree-label-expand--content, "+");
@@ -112,15 +224,14 @@ tbody th:empty {
 .psp-tree-label-collapse:before {
     content: var(--tree-label-collapse--content, "-");
 }
-
-.psp-tree-label:hover:before {
-    color: @positive;
-    text-shadow: 0px 0px 5px @positive;
+.psp-tree-label-expand,
+.psp-tree-label-collapse {
+    cursor: pointer;
 }
 
-regular-table thead tr:last-child th {
-    border-bottom-width: 1px;
-    border-bottom-color: var(--inactive--color, #eaedef);
+.psp-tree-label:hover:before {
+    color: var(--active--color);
+    text-shadow: 0px 0px 5px var(--active--color);
 }
 
 .psp-tree-leaf {
@@ -134,10 +245,10 @@ regular-table thead tr:last-child th {
     text-align: left;
 }
 .psp-positive:not(:focus) {
-    color: var(--rt-pos-cell--color, @positive);
+    color: var(--rt-pos-cell--color);
 }
 .psp-negative:not(:focus) {
-    color: var(--rt-neg-cell--color, @negative);
+    color: var(--rt-neg-cell--color);
 }
 
 regular-table table tbody td {
@@ -151,17 +262,13 @@ regular-table table tbody td {
     border-left-width: 0px;
 }
 
-.psp-bool-type {
-    font-family: var(--button--font-family, "Material Icons");
-}
-
 .boolean-editable {
     cursor: pointer;
 }
 
 regular-table table {
     user-select: none;
-    color: #161616;
+    color: inherit;
     border-collapse: separate;
 
     th {
@@ -170,7 +277,7 @@ regular-table table {
 
     td,
     th {
-        border-color: #eaedef;
+        border-color: var(--inactive--border-color, #8b868045);
         height: 23px;
     }
 
@@ -178,8 +285,12 @@ regular-table table {
         text-overflow: ellipsis;
     }
 
-    .psp-header-leaf {
+    th.psp-header-leaf {
         border-bottom-width: 0px;
+        span {
+            height: 23px;
+            min-height: 23px;
+        }
     }
 
     td,
@@ -194,5 +305,158 @@ regular-table table {
 
     tbody th:empty {
         background-position: 0px -10px;
+    }
+
+    td.psp-select-region,
+    th.psp-select-region {
+        // transition: background-color 0.5s, color 0.5s, border-color 0.5s;
+        background-color: var(--icon--color) !important;
+        color: var(--plugin--background) !important;
+        border-color: var(--plugin--background) !important;
+    }
+}
+
+regular-table
+    tbody
+    tr:hover
+    td.psp-select-region:not(.psp-row-selected):not(.psp-row-subselected),
+regular-table
+    tbody
+    tr:hover
+    + tr
+    td.psp-select-region:not(.psp-row-selected):not(.psp-row-subselected) {
+    border-color: var(--plugin--background) !important;
+}
+
+regular-table tbody tr:hover {
+    td.psp-select-region.psp-menu-open {
+        &:not(.psp-row-selected):not(.psp-row-subselected) {
+            box-shadow: inset -2px 0px 0px var(--plugin--background),
+                inset 2px 0px 0px var(--plugin--background);
+        }
+    }
+}
+
+:host-context(perspective-viewer[settings]) td.psp-select-region.psp-menu-open {
+    box-shadow: inset -2px 0px 0px var(--plugin--background),
+        inset 2px 0px 0px var(--plugin--background);
+}
+
+// This is a design/architecture bug. When the datagrid draws during a sidepanel
+// collapse/uncollapse, the `settings` attribute is set to the _previous_ state
+// as this collapse takes a while and we dont want the new state CSS to apply
+// until the drawing is done. However, this causes the datagrid to draw its
+// _first_ frame as if its in the wrong state, as it detects sidepanel state
+// via HTML attribute checking.
+@mixin design-slash-architecture-bug {
+    regular-table #psp-column-edit-buttons:after {
+        content: none;
+    }
+}
+
+regular-table
+    #psp-column-edit-buttons
+    th:not(.rt-group-corner)
+    span:not(.rt-column-resize):before {
+    content: var(--datagrid-column-edit-button--content, "Edit");
+}
+
+perspective-viewer:not([settings]) {
+    @include design-slash-architecture-bug;
+}
+
+:host-context(perspective-viewer:not([settings])) {
+    @include design-slash-architecture-bug;
+}
+
+// Style the last row of the `<thead>` so that is has a bottom border.
+regular-table table thead tr:last-child:after {
+    width: 10000px;
+    box-sizing: border-box;
+    display: block;
+    height: 23px;
+    content: " ";
+    border-bottom: 1px solid var(--inactive--border-color);
+}
+
+// Extend every row to the right edge of the page with a fake column.
+regular-table table tbody tr:after {
+    width: 10000px;
+    box-sizing: border-box;
+    display: block;
+    height: 23px;
+    content: " ";
+    border-top: 1px solid transparent;
+}
+
+regular-table table tbody tr:not(:first-child):after {
+    border-top: 1px solid var(--inactive--border-color);
+}
+
+regular-table table tbody tr:hover:not(:first-child):after {
+    border-top: 1px solid var(--rt-hover--border-color);
+}
+
+regular-table table tbody tr:hover + tr:after {
+    border-top: 1px solid var(--rt-hover--border-color);
+}
+
+@keyframes pulse_pos {
+    0% {
+        background-color: var(
+            --pulse--background-color-start,
+            rgba(0, 128, 255, 0.5)
+        );
+    }
+    100% {
+        background-color: var(
+            --pulse--background-color-end,
+            rgba(0, 128, 255, 0)
+        );
+    }
+}
+
+@keyframes pulse_pos2 {
+    0% {
+        background-color: var(
+            --pulse--background-color-start,
+            rgba(0, 128, 255, 0.5)
+        );
+    }
+    100% {
+        background-color: var(
+            --pulse--background-color-end,
+            rgba(0, 128, 255, 0)
+        );
+    }
+}
+
+@keyframes pulse_neg {
+    0% {
+        background-color: var(
+            --pulse--background-color-start,
+            rgba(255, 25, 0, 0.5)
+        );
+    }
+    100% {
+        background-color: var(
+            --pulse--background-color-end,
+            rgba(255, 25, 0, 0)
+        );
+    }
+}
+
+@keyframes pulse_neg2 {
+    0% {
+        background-color: var(
+            --pulse--background-color-start,
+            rgba(255, 25, 0, 0.5)
+        );
+    }
+    100% {
+        background-color: var(
+            --pulse--background-color-end,
+            rgba(255, 25, 0, 0)
+        );
     }
 }

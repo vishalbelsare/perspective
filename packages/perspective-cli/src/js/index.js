@@ -1,18 +1,27 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-const {WebSocketServer, table} = require("@finos/perspective");
-const {read_stdin, open_browser} = require("./utils.js");
-const fs = require("fs");
-const path = require("path");
-const program = require("commander");
-const puppeteer = require("puppeteer");
+import { WebSocketServer, table } from "@finos/perspective";
+import { read_stdin, open_browser } from "./utils.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import program from "commander";
+import puppeteer from "puppeteer";
+import { createRequire } from "node:module";
+import * as url from "node:url";
+
+const __dirname = url.fileURLToPath(new URL(".", import.meta.url)).slice(0, -1);
+
+const _require = createRequire(import.meta.url);
 
 /**
  * Convert data from one format to another.
@@ -66,23 +75,24 @@ async function convert(filename, options) {
  * @param {*} filename
  * @param {*} options
  */
-async function host(filename, options) {
-    let files = [path.join(__dirname, "..", "html")];
+export async function host(filename, options) {
+    let files = [process.cwd(), path.join(__dirname, "..", "html")];
     if (options.assets) {
         files = [options.assets, ...files];
     }
     const server = new WebSocketServer({
         assets: files,
         port: options.port,
-        host_psp: true,
     });
+
     let file;
     if (filename) {
-        file = await table(fs.readFileSync(filename).toString());
+        file = await table(fs.readFileSync(filename).toString(), {
+            name: "data_source_one",
+        });
     } else {
         file = await read_stdin();
     }
-    server.host_table("data_source_one", file);
     if (options.open) {
         const browser = await puppeteer.launch({
             headless: false,
@@ -104,13 +114,14 @@ async function host(filename, options) {
 
         const pages = await browser.pages();
 
-        // console.log("Fukc");
         const page = pages[0];
         page.on("close", () => {
             browser.close();
             process.exit(0);
         });
     }
+
+    return server;
 }
 
 program
@@ -158,8 +169,10 @@ program
     .option("-o, --open", "Open a browser automagically.")
     .action(host);
 
-program.parse(process.argv);
-
-if (!process.argv.slice(2).length) {
-    program.help();
+if (_require.main.path.endsWith("perspective-cli")) {
+    if (!process.argv.slice(2).length) {
+        program.help();
+    } else {
+        program.parse(process.argv);
+    }
 }
