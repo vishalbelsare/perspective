@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 
@@ -16,23 +19,16 @@
 #include <windows.h>
 #endif // WIN32
 
-#include <perspective/first.h>
-#include <perspective/raw_types.h>
-#include <perspective/exports.h>
-#include <sstream>
-#include <csignal>
-#include <iostream>
-#include <cstring>
+#include <boost/functional/hash.hpp>
 #include <cstdint>
-#include <memory>
+#include <cstring>
 #include <functional>
-#include <algorithm>
-#include <iomanip>
-#include <chrono>
-#include <fstream>
-#include <boost/unordered_map.hpp>
+#include <iostream>
+#include <perspective/exports.h>
+#include <perspective/first.h>
 #include <perspective/portable.h>
-#include <stdlib.h>
+#include <perspective/raw_types.h>
+#include <sstream>
 
 namespace perspective {
 
@@ -45,7 +41,7 @@ const double PSP_TABLE_GROW_RATIO = 1.3;
 #else
 #define PSP_RESTRICT __restrict__
 #define PSP_THR_LOCAL __thread
-#endif
+#endif // WIN32
 
 const t_index INVALID_INDEX = -1;
 
@@ -60,15 +56,16 @@ const t_index INVALID_INDEX = -1;
 /**
  * @brief Given an error message, throw the error in the binding language:
  *
- * WASM: throws an `Error()` with the error message.
+ * WASM and Pyodide: throws an `Error()` with the error message.
  * Python: throws a `PerspectiveCppException` with the error message.
  *
  * @param message
  * @return PERSPECTIVE_EXPORT
  */
+[[noreturn]]
 PERSPECTIVE_EXPORT void psp_abort(const std::string& message);
 
-//#define PSP_TRACE_SENTINEL() t_trace _psp_trace_sentinel;
+// #define PSP_TRACE_SENTINEL() t_trace _psp_trace_sentinel;
 #define PSP_TRACE_SENTINEL()
 #define _ID(x)                                                                 \
     x // https://stackoverflow.com/questions/25144589/c-macro-overloading-is-not-working
@@ -112,25 +109,30 @@ static_assert(                                               \
 std::is_pod<X>::value && std::is_standard_layout<X>::value , \
 " Unsuitable type found. "
 
-//#define LOG_LIFETIMES 1
+// #define LOG_LIFETIMES 1
 
 #ifdef LOG_LIFETIMES
 #define LOG_CONSTRUCTOR(X)                                                     \
     std::cout << "constructing L: " << __LINE__ << " " << (X) << " <" << this  \
-              << ">" << std::endl;
+              << ">"                                                           \
+              << "\n";
 
 #define LOG_DESTRUCTOR(X)                                                      \
     std::cout << "destroying L: " << __LINE__ << " " << (X) << " <" << this    \
-              << ">" << std::endl;
+              << ">"                                                           \
+              << "\n";
 
 #define LOG_INIT(X)                                                            \
     std::cout << "initing L: " << __LINE__ << " " << (X) << " <" << this       \
-              << ">" << std::endl;
+              << ">"                                                           \
+              << "\n";
 #else
 #define LOG_CONSTRUCTOR(X)
 #define LOG_DESTRUCTOR(X)
 #define LOG_INIT(X)
 #endif
+#define LOG_DEBUG(X)                                                           \
+    std::cout << __FILE__ << ":" << __LINE__ << " DEBUG: " << X << '\n'
 #else
 #define PSP_VERBOSE_ASSERT1(COND, MSG)                                         \
     {                                                                          \
@@ -154,15 +156,38 @@ std::is_pod<X>::value && std::is_standard_layout<X>::value , \
 #define LOG_CONSTRUCTOR(X)
 #define LOG_DESTRUCTOR(X)
 #define LOG_INIT(X)
+#define LOG_DEBUG(X)
 #endif
 
-#define PSP_COMPLAIN_AND_ABORT(X)                                              \
-    psp_abort(X);                                                              \
-    abort();
+#if defined(PSP_ENABLE_WASM) && !defined(PSP_PYODIDE)
+#define ESM_EXPORT(X) __attribute__((import_module("env"), import_name(X)))
 
-#define PSP_VERBOSE_ASSERT(...)                                                \
-    _ID(GET_PSP_VERBOSE_ASSERT(                                                \
-        __VA_ARGS__, PSP_VERBOSE_ASSERT2, PSP_VERBOSE_ASSERT1)(__VA_ARGS__))
+PERSPECTIVE_EXPORT ESM_EXPORT("psp_stack_trace") extern "C" const
+    char* psp_stack_trace();
+
+PERSPECTIVE_EXPORT ESM_EXPORT("psp_heap_size") extern "C" size_t
+    psp_heap_size();
+
+#endif
+
+#if defined(PSP_DEBUG) && defined(PSP_ENABLE_WASM) && !defined(PSP_PYODIDE)
+#define PSP_COMPLAIN_AND_ABORT(X)                                              \
+    {                                                                          \
+        std::stringstream __SS__;                                              \
+        __SS__ << (X) << "\n";                                                 \
+        __SS__ << psp_stack_trace();                                           \
+        std::cout << __SS__.str() << '\n';                                     \
+        psp_abort(__SS__.str());                                               \
+    }
+#else
+#define PSP_COMPLAIN_AND_ABORT(X)                                              \
+    { psp_abort(X); }
+#endif
+
+#define PSP_VERBOSE_ASSERT(...)                                                        \
+    _ID(GET_PSP_VERBOSE_ASSERT(__VA_ARGS__, PSP_VERBOSE_ASSERT2, PSP_VERBOSE_ASSERT1)( \
+        __VA_ARGS__                                                                    \
+    ))
 
 // Currently only supporting single ports
 enum t_gnode_processing_mode {
@@ -234,6 +259,8 @@ enum t_aggtype {
     AGGTYPE_WEIGHTED_MEAN,
     AGGTYPE_UNIQUE,
     AGGTYPE_ANY,
+    AGGTYPE_Q1,
+    AGGTYPE_Q3,
     AGGTYPE_MEDIAN,
     AGGTYPE_JOIN,
     AGGTYPE_SCALED_DIV,
@@ -249,6 +276,8 @@ enum t_aggtype {
     AGGTYPE_LAST_VALUE,
     AGGTYPE_HIGH_WATER_MARK,
     AGGTYPE_LOW_WATER_MARK,
+    AGGTYPE_MAX,
+    AGGTYPE_MIN,
     AGGTYPE_HIGH_MINUS_LOW,
     AGGTYPE_UDF_COMBINER,
     AGGTYPE_UDF_REDUCER,
@@ -429,8 +458,15 @@ struct PERSPECTIVE_EXPORT t_cmp_charptr {
     }
 };
 
+template <class Arg1, class Arg2, class Result>
+struct binary_function {
+    using first_argument_type = Arg1;
+    using second_argument_type = Arg2;
+    using result_type = Result;
+};
+
 struct t_cchar_umap_cmp
-    : public std::binary_function<const char*, const char*, bool> {
+    : public binary_function<const char*, const char*, bool> {
     inline bool
     operator()(const char* x, const char* y) const {
         return strcmp(x, y) == 0;

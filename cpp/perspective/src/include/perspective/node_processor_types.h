@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -24,8 +27,9 @@ struct t_chunk_value_span {
 
 template <typename DATA_T>
 void
-fill_chunk_value_span(t_chunk_value_span<DATA_T>& cvs, DATA_T value,
-    t_uindex bidx, t_uindex eidx) {
+fill_chunk_value_span(
+    t_chunk_value_span<DATA_T>& cvs, DATA_T value, t_uindex bidx, t_uindex eidx
+) {
     cvs.m_value = value;
     cvs.m_bidx = bidx;
     cvs.m_eidx = eidx;
@@ -33,8 +37,9 @@ fill_chunk_value_span(t_chunk_value_span<DATA_T>& cvs, DATA_T value,
 
 template <typename DATA_T>
 void
-fill_chunk_value_span(t_chunk_value_span<DATA_T>* cvs, DATA_T value,
-    t_uindex bidx, t_uindex eidx) {
+fill_chunk_value_span(
+    t_chunk_value_span<DATA_T>* cvs, DATA_T value, t_uindex bidx, t_uindex eidx
+) {
     cvs->m_value = value;
     cvs->m_bidx = bidx;
     cvs->m_eidx = eidx;

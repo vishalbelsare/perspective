@@ -1,0 +1,50 @@
+{
+    "cmake.configureOnOpen": true,
+    "cmake.sourceDirectory": "${workspaceFolder}/cpp/perspective/",
+    "cmake.buildDirectory": "${workspaceFolder}/cpp/perspective/dist/vscode",
+    "cmake.buildEnvironment": {
+        "PSP_ENABLE_WASM": "1"
+    },
+    "python.formatting.provider": "black",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "rust/perspective-python/perspective/tests/"
+    ],
+    "rust-analyzer.server.extraEnv": {
+        "PSP_ROOT_DIR": "../..",
+        "PSP_DISABLE_CPP": "1",
+        "RA_LOG": "rust_analyzer::reload=info",
+        "CARGO_TARGET_DIR": "${workspaceFolder}/perspective-viewer/dist/analyzer"
+    },
+    "rust-analyzer.check.extraArgs": ["--target-dir=rust/target/vscode"],
+    "rust-analyzer.rustfmt.overrideCommand": [
+        "cargo",
+        "run",
+        "-p",
+        "perspective-lint"
+    ],
+    "rust-analyzer.files.excludeDirs": [
+        "node_modules",
+        "py_modules",
+        "dist/",
+        "rust/perspective-js/node_modules",
+        "rust/perspective-python/bench",
+        "rust/perspective-viewer/node_modules",
+        "rust/target"
+    ],
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.check.extraEnv": {
+        "PSP_DISABLE_CPP": "1"
+    },
+    "rust-analyzer.check.overrideCommand": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--message-format=json",
+        "--target-dir=rust/target/vscode"
+    ],
+    "playwright.env": {
+        "TZ": "UTC"
+    },
+    "clangd.arguments": ["--enable-config"]
+}

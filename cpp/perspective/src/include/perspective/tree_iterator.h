@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/raw_types.h>
@@ -73,10 +76,11 @@ private:
 
 template <typename TREE_T, typename CONTAINER_T>
 t_dtiter<TREE_T, CONTAINER_T>::t_dtiter(
-    const TREE_T* tree, CONTAINER_T* queue, t_uindex count)
-    : m_tree(tree)
-    , m_queue(queue)
-    , m_count(count) {}
+    const TREE_T* tree, CONTAINER_T* queue, t_uindex count
+) :
+    m_tree(tree),
+    m_queue(queue),
+    m_count(count) {}
 
 template <typename TREE_T, typename CONTAINER_T>
 t_dtiter<TREE_T, CONTAINER_T>
@@ -122,7 +126,8 @@ t_dtiter<TREE_T, CONTAINER_T>::head(const std::vector<t_uindex>& q) const {
 template <typename TREE_T, typename CONTAINER_T>
 void
 t_dtiter<TREE_T, CONTAINER_T>::enqueue_children(
-    const std::vector<t_uindex>& q, t_index idx) {
+    const std::vector<t_uindex>& q, t_index idx
+) {
     std::vector<t_index> children;
     m_tree->get_child_indices(idx, children);
     for (auto cidx : children) {
@@ -153,7 +158,8 @@ t_dtiter<TREE_T, CONTAINER_T>::head(const std::queue<t_uindex>& q) const {
 template <typename TREE_T, typename CONTAINER_T>
 void
 t_dtiter<TREE_T, CONTAINER_T>::enqueue_children(
-    const std::queue<t_uindex>& q, t_index idx) {
+    const std::queue<t_uindex>& q, t_index idx
+) {
     std::vector<t_index> children;
     m_tree->get_child_indices(idx, children);
     for (auto cidx : children) {
@@ -162,8 +168,7 @@ t_dtiter<TREE_T, CONTAINER_T>::enqueue_children(
 }
 
 template <typename TREE_T>
-t_bfs_iter<TREE_T>::t_bfs_iter(const TREE_T* tree)
-    : m_tree(tree) {}
+t_bfs_iter<TREE_T>::t_bfs_iter(const TREE_T* tree) : m_tree(tree) {}
 
 template <typename TREE_T>
 typename t_bfs_iter<TREE_T>::t_iter
@@ -180,8 +185,7 @@ t_bfs_iter<TREE_T>::end() {
 }
 
 template <typename TREE_T>
-t_dfs_iter<TREE_T>::t_dfs_iter(const TREE_T* tree)
-    : m_tree(tree) {}
+t_dfs_iter<TREE_T>::t_dfs_iter(const TREE_T* tree) : m_tree(tree) {}
 
 template <typename TREE_T>
 typename t_dfs_iter<TREE_T>::t_iter
