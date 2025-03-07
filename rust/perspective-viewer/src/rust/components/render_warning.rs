@@ -1,17 +1,22 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
+use yew::prelude::*;
+
+use super::style::LocalStyle;
 use crate::renderer::*;
 use crate::session::*;
 use crate::utils::*;
 use crate::*;
-
-use yew::prelude::*;
 
 #[derive(Properties)]
 pub struct RenderWarningProps {
@@ -39,13 +44,13 @@ impl RenderWarning {
     fn update_warnings(&mut self, ctx: &Context<Self>) {
         if let Some((num_cols, num_rows, max_cols, max_rows)) = ctx.props().dimensions {
             let count = num_cols * num_rows;
-            if max_cols.map_or(false, |x| x < num_cols) {
+            if max_cols.is_some_and(|x| x < num_cols) {
                 self.col_warn = Some((max_cols.unwrap(), num_cols));
             } else {
                 self.col_warn = None;
             }
 
-            if max_rows.map_or(false, |x| x < num_rows) {
+            if max_rows.is_some_and(|x| x < num_rows) {
                 self.row_warn = Some((num_cols * max_rows.unwrap(), count));
             } else {
                 self.row_warn = None;
@@ -63,7 +68,7 @@ impl Component for RenderWarning {
 
     fn create(ctx: &Context<Self>) -> Self {
         // enable_weak_link_test!(props, link);
-        let mut elem = RenderWarning {
+        let mut elem = Self {
             col_warn: None,
             row_warn: None,
         };
@@ -80,12 +85,12 @@ impl Component for RenderWarning {
                     renderer.disable_active_plugin_render_warning();
                     renderer.update(&session).await
                 });
-            }
+            },
         };
         true
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, ctx: &Context<Self>, _old: &Self::Properties) -> bool {
         self.update_warnings(ctx);
         true
     }
@@ -111,28 +116,34 @@ impl Component for RenderWarning {
                 },
                 (None, Some((x, y))) => html! {
                     <span style="white-space:nowrap">
-                        { "Rendering"}
+                        { "Rendering" }
                         { render_pair(x, y) }
                         { "of points." }
                     </span>
                 },
-                _ => html! {
-                    <div></div>
-                },
+                _ => html! { <div /> },
             };
 
             let onclick = ctx.link().callback(|_| RenderWarningMsg::DismissWarning);
+
             html! {
-                <div
-                    class="plugin_information plugin_information--warning"
-                    id="plugin_information--size">
-                    <span
-                        class="plugin_information__text"
-                        id="plugin_information_count">{ warning }</span>
-                    <span class="plugin_information__actions">
-                        <span class="plugin_information__action" onmousedown={ onclick }>{ "Render all points" }</span>
-                    </span>
-                </div>
+                <>
+                    <LocalStyle href={css!("render-warning")} />
+                    <div
+                        class="plugin_information plugin_information--warning"
+                        id="plugin_information--size"
+                    >
+                        <span class="plugin_information__icon" />
+                        <span class="plugin_information__text" id="plugin_information_count">
+                            { warning }
+                        </span>
+                        <span class="plugin_information__actions">
+                            <span class="plugin_information__action" onmousedown={onclick}>
+                                { "Render all points" }
+                            </span>
+                        </span>
+                    </div>
+                </>
             }
         } else {
             html! {}
@@ -158,14 +169,9 @@ fn render_pair(n: usize, d: usize) -> Html {
     let y = pretty_print_int(d);
     let total = ((n as f64 / d as f64) * 100_f64).floor() as usize;
     html! {
-        <span
-            title={ format!("${} / ${}", x, y) }
-            class="plugin_information--overflow-hint">
+        <span title={format!("${} / ${}", x, y)} class="plugin_information--overflow-hint">
             { "\u{00a0}" }
-            <span
-                class="plugin_information--overflow-hint-percent">{
-                    format!("{}%", total)
-            }</span>
+            <span class="plugin_information--overflow-hint-percent">{ format!("{}%", total) }</span>
             { "\u{00a0}" }
         </span>
     }

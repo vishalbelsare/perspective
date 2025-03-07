@@ -3,17 +3,14 @@
     "private": true,
     "author": "The Perspective Authors",
     "license": "Apache-2.0",
-    "version": "1.4.0",
+    "version": "3.4.0",
     "main": "./dist/esm/perspective.cpp.js",
     "files": [
         "dist/esm/**/*",
         "dist/cjs/**/*"
     ],
     "scripts": {
-        "build": "node ../../scripts/run_emsdk.js node ./build.js",
-        "clean": "rimraf dist",
-        "test": ":",
-        "test:run": ":",
-        "test:build": ":"
+        "build": "node ../../tools/perspective-scripts/run_emsdk.mjs node ./build.js",
+        "clean": "rimraf dist"
     }
 }

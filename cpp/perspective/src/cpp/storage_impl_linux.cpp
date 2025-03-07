@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #include <perspective/first.h>
 
@@ -32,24 +35,24 @@
 
 namespace perspective {
 
-t_lstore::t_lstore(const t_lstore_recipe& a)
-    : m_base(0)
-    , m_dirname(a.m_dirname)
-    , m_colname(a.m_colname)
-    , m_fd(-1)
-    , m_capacity(a.m_capacity)
-    , m_size(0)
-    , m_alignment(a.m_alignment)
-    , m_fflags(a.m_fflags)
-    , m_fmode(a.m_fmode)
-    , m_creation_disposition(a.m_creation_disposition)
-    , m_mprot(a.m_mprot)
-    , m_mflags(a.m_mflags)
-    , m_backing_store(a.m_backing_store)
-    , m_init(false)
-    , m_resize_factor(1.3)
-    , m_version(0)
-    , m_from_recipe(a.m_from_recipe) {
+t_lstore::t_lstore(const t_lstore_recipe& a) :
+    m_base(0),
+    m_dirname(a.m_dirname),
+    m_colname(a.m_colname),
+    m_fd(-1),
+    m_capacity(a.m_capacity),
+    m_size(0),
+    m_alignment(a.m_alignment),
+    m_fflags(a.m_fflags),
+    m_fmode(a.m_fmode),
+    m_creation_disposition(a.m_creation_disposition),
+    m_mprot(a.m_mprot),
+    m_mflags(a.m_mflags),
+    m_backing_store(a.m_backing_store),
+    m_init(false),
+    m_resize_factor(1.3),
+    m_version(0),
+    m_from_recipe(a.m_from_recipe) {
     if (m_from_recipe) {
         m_fname = a.m_fname;
         return;
@@ -68,8 +71,9 @@ t_lstore::create_file() {
     t_handle fd = open(m_fname.c_str(), m_fflags, m_fmode);
     PSP_VERBOSE_ASSERT(fd != -1, "Error opening file");
 
-    if (m_from_recipe)
+    if (m_from_recipe) {
         return fd;
+    }
 
     t_index truncate_bytes = static_cast<t_index>(capacity());
 
@@ -80,6 +84,7 @@ t_lstore::create_file() {
 }
 
 void*
+// NOLINTNEXTLINE
 t_lstore::create_mapping() {
     void* rval = mmap(0, capacity(), m_mprot, m_mflags, m_fd, 0);
     PSP_VERBOSE_ASSERT(rval != MAP_FAILED, "mmap failed");

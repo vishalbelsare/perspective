@@ -1,18 +1,26 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use crate::dragdrop::*;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 
 use derivative::Derivative;
-use std::marker::PhantomData;
 use web_sys::*;
 use yew::html::Scope;
 use yew::prelude::*;
+
+use crate::components::column_selector::{EmptyColumn, InPlaceColumn, InvalidColumn};
+use crate::custom_elements::ColumnDropDownElement;
+use crate::dragdrop::*;
 
 /// Must be implemented by `Properties` of children of `DragDropList`, returning
 /// the value a DragDropItem represents.
@@ -25,6 +33,8 @@ pub trait DragContext<T> {
     fn close(index: usize) -> T;
     fn dragleave() -> T;
     fn dragenter(index: usize) -> T;
+    fn create(col: InPlaceColumn) -> T;
+    fn is_self_move(effect: DragTarget) -> bool;
 }
 
 #[derive(Properties, Derivative)]
@@ -38,6 +48,8 @@ where
     pub parent: Scope<T>,
     pub dragdrop: DragDrop,
     pub name: &'static str,
+    pub column_dropdown: ColumnDropDownElement,
+    pub exclude: HashSet<String>,
     pub children: ChildrenWithProps<U>,
 
     #[prop_or_default]
@@ -69,7 +81,9 @@ pub enum DragDropListMsg {
 }
 
 /// A sub-selector for a list-like component of a `JsViewConfig`, such as
-/// `filters` and `sort`.  `DragDropList` is parameterized by two `Component`
+/// `filters` and `sort`.  
+///
+/// `DragDropList` is parameterized by two `Component`
 /// types, the parent component `T` and the inner item compnent `U`, which must
 /// additionally implement `DragDropListItemProps` trait on its own `Properties`
 /// associated type.
@@ -101,7 +115,7 @@ where
     type Properties = DragDropListProps<T, U>;
 
     fn create(_ctx: &Context<Self>) -> Self {
-        DragDropList {
+        Self {
             parent_type: PhantomData,
             item_type: PhantomData,
             draggable_type: PhantomData,
@@ -110,7 +124,7 @@ where
         }
     }
 
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, _ctx: &Context<Self>, _old: &Self::Properties) -> bool {
         true
     }
 
@@ -148,7 +162,7 @@ where
                 } else {
                     false
                 }
-            }
+            },
         }
     }
 
@@ -180,11 +194,14 @@ where
         let drop = Callback::from({
             let dragdrop = ctx.props().dragdrop.clone();
             let link = ctx.link().clone();
-            move |_| {
+            move |event| {
                 link.send_message(DragDropListMsg::Freeze(false));
-                dragdrop.notify_drop();
+                dragdrop.notify_drop(&event);
             }
         });
+
+        let invalid_drag: bool;
+        let mut valid_duplicate_drag = false;
 
         let columns_html = {
             let mut columns = ctx
@@ -193,32 +210,51 @@ where
                 .iter()
                 .map(|x| (true, Some(x)))
                 .enumerate()
-                .collect::<Vec<(usize, (bool, Option<yew::virtual_dom::VChild<U>>))>>();
+                .collect::<Vec<_>>();
 
-            if let Some((x, column)) = &ctx.props().is_dragover {
-                let index = *x as usize;
-                let col_vchild = columns
+            invalid_drag = if let Some((x, column)) = &ctx.props().is_dragover {
+                let index = *x;
+                let is_append = index == columns.len();
+                let is_self_move = ctx
+                    .props()
+                    .dragdrop
+                    .get_drag_target()
+                    .map(|x| V::is_self_move(x))
+                    .unwrap_or_default();
+
+                let is_duplicate = columns
                     .iter()
-                    .map(|z| z.1 .1.as_ref().unwrap())
-                    .find(|x| x.props.get_item() == *column)
-                    .cloned();
+                    .position(|x| x.1.1.as_ref().unwrap().props.get_item() == *column);
 
-                if !ctx.props().allow_duplicates {
-                    columns.retain(|x| x.1 .1.as_ref().unwrap().props.get_item() != *column);
+                valid_duplicate_drag = is_duplicate.is_some() && !ctx.props().allow_duplicates;
+                if let Some(duplicate) = is_duplicate {
+                    if !is_append && (!ctx.props().allow_duplicates || is_self_move) {
+                        columns.remove(duplicate);
+                    }
                 }
 
                 // If inserting into the middle of the list, use
                 // the length of the existing element to prevent
                 // jitter as the underlying dragover zone moves.
                 if index < columns.len() {
-                    columns.insert(index, (index, (false, col_vchild)));
+                    columns.insert(index, (usize::MAX, (false, None)));
+                    false
+                } else if (!is_append && !ctx.props().allow_duplicates)
+                    || ((!is_append || !is_self_move)
+                        && (is_duplicate.is_none() || ctx.props().allow_duplicates))
+                {
+                    columns.push((usize::MAX, (false, None)));
+                    false
                 } else {
-                    columns.push((index, (false, col_vchild)));
+                    true
                 }
-            }
+            } else {
+                false
+            };
 
             columns
                 .into_iter()
+                .enumerate()
                 .map(|(idx, column)| {
                     let close = ctx.props().parent.callback(move |_| V::close(idx));
                     let dragenter = ctx.props().parent.callback({
@@ -231,26 +267,25 @@ where
                         }
                     });
 
-                    if let (true, Some(column)) = column {
+                    if let (key, (true, Some(column))) = column {
                         html! {
-                            <div class="pivot-column" ondragenter={ dragenter }>
-                                {
-                                    Html::from(column)
-                                }
-                                <span class="row_close" onmousedown={ close }></span>
+                            <div {key} class="pivot-column" ondragenter={dragenter}>
+                                { Html::from(column) }
+                                <span class="row_close" onmousedown={close} />
                             </div>
                         }
-                    } else if let (_, Some(column)) = column {
+                    } else if let (key, (_, Some(column))) = column {
                         html! {
-                            <div class="pivot-column config-drop" ondragenter={ dragenter }>
-                                {
-                                    Html::from(column)
-                                }
+                            <div {key} class="pivot-column" ondragenter={dragenter}>
+                                { Html::from(column) }
+                                <span class="row_close" style="opacity:0.3" />
                             </div>
                         }
                     } else {
+                        let (key, _) = column;
                         html! {
-                            <div class="pivot-column config-drop" ondragenter={ dragenter }>
+                            <div {key} class="pivot-column" ondragenter={dragenter}>
+                                <div class="config-drop" />
                             </div>
                         }
                     }
@@ -258,26 +293,29 @@ where
                 .collect::<Html>()
         };
 
-        let style = match self.frozen_size {
-            Some(x) => format!("max-width:{}px;min-width:{}px", x.floor(), x.ceil()),
-            None => "".to_owned(),
-        };
-
+        let column_dropdown = ctx.props().column_dropdown.clone();
+        let exclude = ctx.props().exclude.clone();
+        let on_select = ctx.props().parent.callback(V::create);
         html! {
-            <div style={style} ref={ self.elem.clone() } class="rrow">
+            <div ref={&self.elem} class="rrow">
                 <div
-                    id={ ctx.props().name }
-                    ondragover={ dragover }
-                    ondragenter={ drag_container.dragenter }
-                    ondragleave={ drag_container.dragleave }
-                    ref={ drag_container.noderef }
-                    ondrop={ drop }>
-
+                    id={ctx.props().name}
+                    ondragover={dragover}
+                    ondragenter={drag_container.dragenter}
+                    ondragleave={drag_container.dragleave}
+                    ref={drag_container.noderef}
+                    ondrop={drop}
+                >
                     <div class="psp-text-field">
-                        <ul class="psp-text-field__input" for={ ctx.props().name }>
+                        <ul class="psp-text-field__input" for={ctx.props().name}>
                             { columns_html }
+                            if ctx.props().is_dragover.is_none() | (!invalid_drag && valid_duplicate_drag) {
+                                <EmptyColumn {column_dropdown} {exclude} {on_select} />
+                            } else if invalid_drag {
+                                <InvalidColumn />
+                            }
                         </ul>
-                        <label class="pivot-selector-label" for={ ctx.props().name }></label>
+                        <label class="pivot-selector-label" for={ctx.props().name} />
                     </div>
                 </div>
             </div>

@@ -1,21 +1,22 @@
-/******************************************************************************
- *
- * Copyright (c) 2019, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-import {DOMWidgetModel} from "@jupyter-widgets/base";
-import {PERSPECTIVE_VERSION} from "./version";
+import { DOMWidgetModel } from "@jupyter-widgets/base";
+import { PERSPECTIVE_VERSION } from "./version";
 
 /**
  * TODO: document
  */
 export class PerspectiveModel extends DOMWidgetModel {
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-
     defaults() {
         return {
             ...super.defaults(),
@@ -25,20 +26,6 @@ export class PerspectiveModel extends DOMWidgetModel {
             _view_name: PerspectiveModel.view_name,
             _view_module: PerspectiveModel.view_module,
             _view_module_version: PerspectiveModel.view_module_version,
-            plugin: "datagrid",
-            columns: [],
-            group_by: [],
-            split_by: [],
-            aggregates: {},
-            sort: [],
-            filter: [],
-            expressions: [],
-            plugin_config: {},
-            settings: true,
-            theme: "Material Light",
-            editable: false,
-            server: false,
-            client: false,
         };
     }
 }

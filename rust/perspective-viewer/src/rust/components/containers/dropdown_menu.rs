@@ -1,19 +1,24 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use super::select::SelectItem;
-use crate::*;
 use std::marker::PhantomData;
 use std::rc::Rc;
+
 use web_sys::*;
 use yew::prelude::*;
 
-pub static CSS: &str = include_str!("../../../../build/css/dropdown-menu.css");
+use super::select::SelectItem;
+use crate::components::style::LocalStyle;
+use crate::*;
 
 pub type DropDownMenuItem<T> = SelectItem<T>;
 
@@ -43,7 +48,7 @@ where
     type Properties = DropDownMenuProps<T>;
 
     fn create(_ctx: &Context<Self>) -> Self {
-        DropDownMenu {
+        Self {
             _props: Default::default(),
         }
     }
@@ -65,44 +70,35 @@ where
                         });
 
                         html! {
-                            <span onmousedown={ click }class="selected">
-                                { x.clone().into() }
-                            </span>
+                            <span onmousedown={click} class="selected">{ x.clone().into() }</span>
                         }
-                    }
+                    },
                     DropDownMenuItem::OptGroup(name, xs) => {
-                        html_template! {
-                            <span class="dropdown-group-label">{ name }</span>
-                            <div class="dropdown-group-container">
-                                {
-                                    xs.iter().map(|x| {
-                                        let click = ctx.props().callback.reform({
-                                            let value = x.clone();
-                                            move |_: MouseEvent| value.clone()
-                                        });
-                                        html! {
-                                            <span onmousedown={ click }>
-                                                { x.clone().into() }
-                                            </span>
-                                        }
-                                    }).collect::<Html>()
-                                }
-                            </div>
+                        html! {
+                            <>
+                                <span class="dropdown-group-label">{ name }</span>
+                                <div class="dropdown-group-container">
+                                    { xs.iter().map(|x| {
+                                    let click = ctx.props().callback.reform({
+                                        let value = x.clone();
+                                        move |_: MouseEvent| value.clone()
+                                    });
+                                    html! {
+                                        <span onmousedown={ click }>
+                                            { x.clone().into() }
+                                        </span>
+                                    }
+                                }).collect::<Html>() }
+                                </div>
+                            </>
                         }
-                    }
+                    },
                 })
                 .collect::<Html>()
         } else {
-            html! {
-                <span class="no-results">{ "No Completions" }</span>
-            }
+            html! { <span class="no-results">{ "No Completions" }</span> }
         };
 
-        html_template! {
-            <style>
-                { &CSS }
-            </style>
-            { body }
-        }
+        html! { <><LocalStyle href={css!("containers/dropdown-menu")} />{ body }</> }
     }
 }

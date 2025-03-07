@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -15,7 +18,6 @@
 #include <perspective/mask.h>
 #include <perspective/scalar.h>
 #include <perspective/exports.h>
-#include <boost/scoped_ptr.hpp>
 #include <functional>
 #include <set>
 
@@ -130,11 +132,21 @@ struct t_operator_contains<t_uindex, DTYPE_STR> {
 struct PERSPECTIVE_EXPORT t_fterm {
     t_fterm();
 
-    t_fterm(const std::string& colname, t_filter_op op, t_tscalar threshold,
-        const std::vector<t_tscalar>& bag);
+    t_fterm(
+        std::string colname,
+        t_filter_op op,
+        t_tscalar threshold,
+        const std::vector<t_tscalar>& bag
+    );
 
-    t_fterm(const std::string& colname, t_filter_op op, t_tscalar threshold,
-        const std::vector<t_tscalar>& bag, bool negated, bool is_primary);
+    t_fterm(
+        std::string colname,
+        t_filter_op op,
+        t_tscalar threshold,
+        const std::vector<t_tscalar>& bag,
+        bool negated,
+        bool is_primary
+    );
 
     inline bool
     operator()(t_tscalar s) const {
@@ -173,7 +185,8 @@ public:
     t_filter(const std::vector<std::string>& columns);
 
     t_filter(
-        const std::vector<std::string>& columns, t_uindex bidx, t_uindex eidx);
+        const std::vector<std::string>& columns, t_uindex bidx, t_uindex eidx
+    );
 
     t_filter(const std::vector<std::string>& columns, t_uindex mask_size);
     t_filter(const t_mask& mask);

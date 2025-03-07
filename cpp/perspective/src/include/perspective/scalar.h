@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -40,7 +43,9 @@ struct PERSPECTIVE_EXPORT t_const_char_comparator {
     }
 };
 
+#ifdef PSP_SSO_SCALAR
 const int SCALAR_INPLACE_LEN = 13;
+#endif
 
 union t_scalar_u {
     std::int64_t m_int64;
@@ -59,7 +64,9 @@ union t_scalar_u {
     bool m_bool;
 
     const char* m_charptr;
+#ifdef PSP_SSO_SCALAR
     char m_inplace_char[SCALAR_INPLACE_LEN];
+#endif
 };
 
 // t_scalar should remain a POD type.
@@ -77,7 +84,7 @@ struct PERSPECTIVE_EXPORT t_tscalar {
     t_tscalar(int v);
 
     template <typename T>
-    T get() const;
+    T get() const = delete;
 
     void set(std::int64_t v);
     void set(std::int32_t v);
@@ -143,6 +150,8 @@ struct PERSPECTIVE_EXPORT t_tscalar {
     t_tscalar& operator/=(const t_tscalar& rhs);
     t_tscalar& operator%=(const t_tscalar& rhs);
 
+    operator std::size_t() const;
+
     t_tscalar add_typesafe(const t_tscalar& rhs) const;
     t_tscalar sub_typesafe(const t_tscalar& rhs) const;
 
@@ -182,9 +191,11 @@ struct PERSPECTIVE_EXPORT t_tscalar {
     void clear();
     t_dtype get_dtype() const;
     const char* get_char_ptr() const;
+#ifdef PSP_SSO_SCALAR
     bool is_inplace() const;
     static bool can_store_inplace(const char* s);
-
+    static bool can_store_inplace(const std::string& s);
+#endif
     template <typename DATA_T>
     t_tscalar coerce_numeric() const;
 
@@ -193,52 +204,54 @@ struct PERSPECTIVE_EXPORT t_tscalar {
     t_scalar_u m_data;
     unsigned char m_type;
     t_status m_status;
+#ifdef PSP_SSO_SCALAR
     bool m_inplace;
+#endif
 };
 
-inline t_tscalar operator"" _ts(long double v) {
-    t_tscalar rv;
-    double tmp = v;
-    rv.set(tmp);
-    return rv;
-}
+// inline t_tscalar operator"" _ts(long double v) {
+//     t_tscalar rv;
+//     double tmp = v;
+//     rv.set(tmp);
+//     return rv;
+// }
 
-inline t_tscalar operator"" _ts(unsigned long long int v) {
-    t_tscalar rv;
-    std::int64_t tmp = v;
-    rv.set(tmp);
-    return rv;
-}
+// inline t_tscalar operator"" _ts(unsigned long long int v) {
+//     t_tscalar rv;
+//     std::int64_t tmp = v;
+//     rv.set(tmp);
+//     return rv;
+// }
 
-inline t_tscalar operator"" _ts(const char* v, std::size_t len) {
-    t_tscalar rv;
-    rv.set(v);
-    return rv;
-}
+// inline t_tscalar operator"" _ts(const char* v, std::size_t len) {
+//     t_tscalar rv;
+//     rv.set(v);
+//     return rv;
+// }
 
-inline t_tscalar operator"" _ns(long double v) {
-    t_tscalar rv;
-    rv.m_data.m_uint64 = 0;
-    rv.m_type = DTYPE_FLOAT64;
-    rv.m_status = STATUS_INVALID;
-    return rv;
-}
+// inline t_tscalar operator"" _ns(long double v) {
+//     t_tscalar rv;
+//     rv.m_data.m_uint64 = 0;
+//     rv.m_type = DTYPE_FLOAT64;
+//     rv.m_status = STATUS_INVALID;
+//     return rv;
+// }
 
-inline t_tscalar operator"" _ns(unsigned long long int v) {
-    t_tscalar rv;
-    rv.m_data.m_uint64 = 0;
-    rv.m_type = DTYPE_INT64;
-    rv.m_status = STATUS_INVALID;
-    return rv;
-}
+// inline t_tscalar operator"" _ns(unsigned long long int v) {
+//     t_tscalar rv;
+//     rv.m_data.m_uint64 = 0;
+//     rv.m_type = DTYPE_INT64;
+//     rv.m_status = STATUS_INVALID;
+//     return rv;
+// }
 
-inline t_tscalar operator"" _ns(const char* v, std::size_t len) {
-    t_tscalar rv;
-    rv.m_data.m_uint64 = 0;
-    rv.m_type = DTYPE_STR;
-    rv.m_status = STATUS_INVALID;
-    return rv;
-}
+// inline t_tscalar operator"" _ns(const char* v, std::size_t len) {
+//     t_tscalar rv;
+//     rv.m_data.m_uint64 = 0;
+//     rv.m_type = DTYPE_STR;
+//     rv.m_status = STATUS_INVALID;
+//     return rv;
+// }
 
 PERSPECTIVE_EXPORT t_tscalar mknone();
 PERSPECTIVE_EXPORT t_tscalar mknull(t_dtype dtype);
@@ -382,14 +395,12 @@ t_tscalar::compare_common(const t_tscalar& rhs) const {
             return cmp(get_char_ptr(), rhs.get_char_ptr());
         } break;
         case DTYPE_OBJECT: {
-            // Just promote to int64 and compare
-            COMPARER_T<std::uint64_t> cmp;
-            return cmp(m_data.m_uint64, rhs.m_data.m_uint64);
+            PSP_COMPLAIN_AND_ABORT("Object columns not supported");
         } break;
         default: {
 #ifdef PSP_DEBUG
             std::cout << __FILE__ << ":" << __LINE__ << " Reached unknown type "
-                      << m_type << std::endl;
+                      << m_type << "\n";
 #endif
             return false;
         }
@@ -446,10 +457,10 @@ struct hash<perspective::t_tscalar> {
     }
 };
 
-PERSPECTIVE_EXPORT std::ostream& operator<<(
-    std::ostream& os, const perspective::t_tscalar& t);
-PERSPECTIVE_EXPORT std::ostream& operator<<(
-    std::ostream& os, const std::vector<perspective::t_tscalar>& t);
+PERSPECTIVE_EXPORT std::ostream&
+operator<<(std::ostream& os, const perspective::t_tscalar& t);
+PERSPECTIVE_EXPORT std::ostream&
+operator<<(std::ostream& os, const std::vector<perspective::t_tscalar>& t);
 
 /**
  * exprtk uses std::numeric_limits<T>::quiet_NaN() and min_exponent10.

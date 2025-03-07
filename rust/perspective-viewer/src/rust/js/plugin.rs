@@ -1,17 +1,20 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use crate::utils::*;
-
+use perspective_js::utils::*;
 use serde::*;
 use wasm_bindgen::prelude::*;
 
-use super::perspective::JsPerspectiveView;
+use crate::presentation::ColumnConfigMap;
 
 /// Perspective FFI
 #[wasm_bindgen]
@@ -22,6 +25,9 @@ extern "C" {
 
     #[wasm_bindgen(method, getter)]
     pub fn name(this: &JsPerspectiveViewerPlugin) -> String;
+
+    #[wasm_bindgen(method, getter)]
+    pub fn category(this: &JsPerspectiveViewerPlugin) -> Option<String>;
 
     #[wasm_bindgen(method, getter)]
     pub fn max_columns(this: &JsPerspectiveViewerPlugin) -> Option<usize>;
@@ -45,60 +51,86 @@ extern "C" {
     #[wasm_bindgen(method, getter)]
     pub fn config_column_names(this: &JsPerspectiveViewerPlugin) -> Option<js_sys::Array>;
 
-    #[wasm_bindgen(method)]
-    pub fn save(this: &JsPerspectiveViewerPlugin) -> JsValue;
+    #[wasm_bindgen(method, getter)]
+    pub fn priority(this: &JsPerspectiveViewerPlugin) -> Option<i32>;
 
-    #[wasm_bindgen(method)]
-    pub fn restore(this: &JsPerspectiveViewerPlugin, token: &JsValue);
+    /// Don't call this method directly. Instead, call the corresponding method on the PluginColumnStyles model.
+    #[wasm_bindgen(method, catch)]
+    pub fn can_render_column_styles(this: &JsPerspectiveViewerPlugin, view_type: &str, group: Option<&str>) -> ApiResult<bool>;
+
+    #[wasm_bindgen(method, catch)]
+    pub fn column_style_controls(this: &JsPerspectiveViewerPlugin, view_type: &str, group: Option<&str>) -> ApiResult<JsValue>;
+
+    #[wasm_bindgen(method, catch)]
+    pub fn save(this: &JsPerspectiveViewerPlugin) -> ApiResult<JsValue>;
+
+    #[wasm_bindgen(method, js_name=restore, catch)]
+    pub fn _restore(this: &JsPerspectiveViewerPlugin, token: &JsValue, columns_config: &JsValue) -> ApiResult<()>;
 
     #[wasm_bindgen(method)]
     pub fn delete(this: &JsPerspectiveViewerPlugin);
 
     #[wasm_bindgen(method, catch)]
     pub async fn restyle(
-        this: &JsPerspectiveViewerPlugin, 
-        view: &JsPerspectiveView
-    ) -> Result<JsValue, JsValue>;
+        this: &JsPerspectiveViewerPlugin,
+        view: perspective_js::View
+    ) -> ApiResult<JsValue>;
 
     #[wasm_bindgen(method, catch)]
     pub async fn draw(
         this: &JsPerspectiveViewerPlugin,
-        view: &JsPerspectiveView,
+        view: perspective_js::View,
         column_limit: Option<usize>,
         row_limit: Option<usize>,
         force: bool
-    ) -> Result<(), JsValue>;
+    ) -> ApiResult<()>;
 
     #[wasm_bindgen(method, catch)]
     pub async fn update(
         this: &JsPerspectiveViewerPlugin,
-        view: &JsPerspectiveView,
+        view: perspective_js::View,
         column_limit: Option<usize>,
         row_limit: Option<usize>,
         force: bool
-    ) -> Result<(), JsValue>;
+    ) -> ApiResult<()>;
 
     #[wasm_bindgen(method, catch)]
-    pub async fn clear(this: &JsPerspectiveViewerPlugin) -> Result<JsValue, JsValue>;
+    pub async fn clear(this: &JsPerspectiveViewerPlugin) -> ApiResult<JsValue>;
 
     #[wasm_bindgen(method, catch)]
-    pub async fn resize(this: &JsPerspectiveViewerPlugin) -> Result<JsValue, JsValue>;
+    pub async fn resize(this: &JsPerspectiveViewerPlugin) -> ApiResult<JsValue>;
+
 }
 
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq)]
+impl JsPerspectiveViewerPlugin {
+    pub fn restore(
+        &self,
+        token: &JsValue,
+        columns_config: Option<&ColumnConfigMap>,
+    ) -> ApiResult<()> {
+        let columns_config = JsValue::from_serde_ext(&columns_config).unwrap();
+        self._restore(token, &columns_config)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ColumnSelectMode {
+    #[default]
     Toggle,
     Select,
 }
 
-impl Default for ColumnSelectMode {
-    fn default() -> Self {
-        ColumnSelectMode::Toggle
+impl ColumnSelectMode {
+    pub fn css(&self) -> yew::Classes {
+        match self {
+            Self::Toggle => yew::classes!("toggle-mode", "is_column_active"),
+            Self::Select => yew::classes!("select-mode", "is_column_active"),
+        }
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ViewConfigRequirements {
     pub min: Option<usize>,
     pub names: Option<Vec<String>>,
@@ -119,11 +151,13 @@ impl ViewConfigRequirements {
 }
 
 impl JsPerspectiveViewerPlugin {
-    pub fn get_requirements(&self) -> Result<ViewConfigRequirements, JsValue> {
+    pub fn get_requirements(&self) -> ApiResult<ViewConfigRequirements> {
         Ok(ViewConfigRequirements {
             min: self.min_config_columns(),
-            mode: self.select_mode().into_serde().into_jserror()?,
-            names: self.config_column_names().map(|x| x.into_serde().unwrap()),
+            mode: self.select_mode().into_serde_ext()?,
+            names: self
+                .config_column_names()
+                .map(|x| x.into_serde_ext().unwrap()),
             max_columns: self.max_columns(),
             max_cells: self.max_cells(),
             name: self.name(),

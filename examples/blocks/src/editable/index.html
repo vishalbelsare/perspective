@@ -1,43 +1,36 @@
-<!--
-   
-   Copyright (c) 2017, the Perspective Authors.
-   
-   This file is part of the Perspective library, distributed under the terms of
-   the Apache License 2.0.  The full license can be found in the LICENSE file.
-
--->
-
 <!DOCTYPE html>
 <html>
     <head>
-        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"/>
-
-        <script type="module" src="/node_modules/@finos/perspective/dist/cdn/perspective.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer/dist/cdn/perspective-viewer.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer-d3fc/dist/cdn/perspective-viewer-d3fc.js"></script>
-
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
+        <link rel="preload" href="/node_modules/@finos/perspective/dist/wasm/perspective-server.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" />
+        <link rel="preload" href="/node_modules/@finos/perspective-viewer/dist/wasm/perspective-viewer.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" />
+        <link rel="preload" href="/node_modules/superstore-arrow/superstore.lz4.arrow" as="fetch" type="arraybuffer" crossorigin="anonymous" />
         <link rel="stylesheet" crossorigin="anonymous" href="/node_modules/@finos/perspective-viewer/dist/css/themes.css" />
-
         <script type="module">
-            import {worker} from "/node_modules/@finos/perspective/dist/cdn/perspective.js";
+            import "/node_modules/@finos/perspective-viewer/dist/cdn/perspective-viewer.js";
+            import "/node_modules/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js";
+            import "/node_modules/@finos/perspective-viewer-d3fc/dist/cdn/perspective-viewer-d3fc.js";
 
-            const WORKER = worker();
-            const REQ = fetch("/node_modules/superstore-arrow/superstore.arrow");
+            import perspective from "/node_modules/@finos/perspective/dist/cdn/perspective.js";
 
-            async function load() {
-                const resp = await REQ;
+            const viewer = document.getElementsByTagName("perspective-viewer")[0];
+
+            const worker = new SharedWorker("/node_modules/@finos/perspective/dist/cdn/perspective-server.worker.js");
+            const client = await perspective.worker(worker);
+            const tables = await client.get_hosted_table_names();
+
+            if (tables.length > 0) {
+                const table = client.open_table(tables[0]);
+                viewer.load(table);
+            } else {
+                const resp = await fetch("/node_modules/superstore-arrow/superstore.lz4.arrow");
                 const arrow = await resp.arrayBuffer();
-                const el = document.getElementsByTagName("perspective-viewer")[0];
-                const table = WORKER.table(arrow);
-                el.load(table);
-                el.toggleConfig();
+                const table = client.table(arrow);
+                viewer.load(table);
             }
 
-            load();
-
+            viewer.restore({ plugin_config: { edit_mode: "EDIT" }, settings: true });
         </script>
-
         <style>
             perspective-viewer {
                 position: absolute;
@@ -48,8 +41,7 @@
             }
         </style>
     </head>
-
     <body>
-        <perspective-viewer editable> </perspective-viewer>
+        <perspective-viewer></perspective-viewer>
     </body>
 </html>

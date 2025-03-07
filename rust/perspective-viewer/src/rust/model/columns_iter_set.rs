@@ -1,43 +1,65 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use crate::config::*;
+use std::collections::HashSet;
+
+use itertools::Itertools;
+use perspective_client::ColumnType;
+use perspective_client::config::*;
+
+use super::{HasRenderer, HasSession, IsInvalidDrop};
 use crate::dragdrop::*;
 use crate::renderer::*;
 use crate::session::*;
 use crate::*;
 
-use itertools::Itertools;
-use std::collections::HashSet;
-use std::fmt::Display;
-
 /// The possible states of a column (row) in the active columns list, including
 /// the `Option<String>` label type.
-#[derive(Clone, PartialEq)]
-pub enum ActiveColumnState {
-    Column(Label, String),
-    Required(Label),
-    DragOver(Label),
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ActiveColumnState {
+    pub label: Label,
+    pub state: ActiveColumnStateData,
 }
 
-impl Display for ActiveColumnState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            ActiveColumnState::Column(Some(label), _) => label,
-            ActiveColumnState::Required(Some(label)) => label,
-            ActiveColumnState::DragOver(Some(label)) => label,
-            _ => "",
-        })
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ActiveColumnStateData {
+    Column(String),
+    Required,
+    DragOver,
+    Invalid,
+}
+
+impl From<&Option<String>> for ActiveColumnStateData {
+    fn from(value: &Option<String>) -> Self {
+        match value {
+            Some(x) => Self::Column(x.to_string()),
+            None => Self::Required,
+        }
+    }
+}
+
+impl ActiveColumnState {
+    pub fn get_name(&self) -> Option<&'_ str> {
+        match &self.state {
+            ActiveColumnStateData::Column(x) => Some(x.as_str()),
+            _ => None,
+        }
     }
 }
 
 type Label = Option<String>;
 
+/// An iterator for columns state.
+///
 /// Encapsulates the logic of determining which columns go in the "Active" and
 /// "Inactive" column sections of the `ColumnSelector` component, via the
 /// iterator returning functions `active()`, `inactive()` and `expression()`.
@@ -48,6 +70,17 @@ pub struct ColumnsIteratorSet<'a> {
     metadata: MetadataRef<'a>,
     is_dragover_column: Option<(usize, String)>,
     named_columns: Vec<String>,
+}
+
+impl HasRenderer for ColumnsIteratorSet<'_> {
+    fn renderer(&self) -> &'_ Renderer {
+        self.renderer
+    }
+}
+impl HasSession for ColumnsIteratorSet<'_> {
+    fn session(&self) -> &'_ Session {
+        self.session
+    }
 }
 
 impl<'a> ColumnsIteratorSet<'a> {
@@ -110,19 +143,20 @@ impl<'a> ColumnsIteratorSet<'a> {
                     .map(|x| self.renderer.metadata().is_swap(x))
                     .unwrap_or_default();
 
+                let is_swap_invalid = self.is_invalid_columns_column(from_column, *to_index);
                 let is_dragover_after_last = *to_index == self.config.columns.len();
-                let is_dragover_last = is_dragover_after_last && from_index.is_none()
-                    || (*to_index == self.config.columns.len() - 1 && from_index.is_some());
+                if is_swap_invalid {
+                    let all_columns = self.config.columns.iter().map(|x| x.into());
+                    let before_cols = all_columns
+                        .clone()
+                        .pad_using(min_cols, |_| ActiveColumnStateData::Required)
+                        .take(*to_index);
 
-                let tail = if has_blank_tail || is_dragover_last {
-                    [].iter().cloned()
-                } else {
-                    [Some(&None)].iter().cloned()
-                };
-
-                if is_dragover_after_last && from_index.is_some() {
+                    let after_cols = all_columns.skip(*to_index + 1);
                     self.to_active_column_state(Box::new(
-                        self.config.columns.iter().map(Some).chain(tail),
+                        before_cols
+                            .chain(std::iter::once(ActiveColumnStateData::Invalid))
+                            .chain(after_cols),
                     ))
                 } else if is_to_swap || is_from_required {
                     let all_columns = self.config.columns.iter().filter_map(move |x| match x {
@@ -130,24 +164,27 @@ impl<'a> ColumnsIteratorSet<'a> {
                             if is_to_empty && !is_from_swap {
                                 None
                             } else {
-                                Some(to_column.unwrap_or(&None))
+                                Some(to_column.unwrap_or(&None).into())
                             }
-                        }
-                        x => Some(x),
+                        },
+                        x => Some(x.into()),
                     });
 
                     let before_cols = all_columns
                         .clone()
-                        .pad_using(min_cols, |_| &None)
-                        .take(*to_index)
-                        .map(Some);
+                        .pad_using(min_cols, |_| ActiveColumnStateData::Required)
+                        .take(*to_index);
 
-                    let after_cols = all_columns.skip(*to_index + 1).map(Some);
+                    let after_cols = all_columns.skip(*to_index + 1);
                     self.to_active_column_state(Box::new(
                         before_cols
-                            .chain([None].iter().cloned())
-                            .chain(after_cols)
-                            .chain(tail),
+                            .chain(std::iter::once(ActiveColumnStateData::DragOver))
+                            .chain(after_cols),
+                    ))
+                } else if !is_from_swap && from_index.is_some() && is_dragover_after_last {
+                    let iter = self.config.columns.iter().map(|x| x.into());
+                    self.to_active_column_state(Box::new(
+                        iter.chain(std::iter::once(ActiveColumnStateData::Invalid)),
                     ))
                 } else {
                     let to_offset = match to_column {
@@ -158,57 +195,57 @@ impl<'a> ColumnsIteratorSet<'a> {
                     let all_columns = self.config.columns.iter().filter_map(move |x| match x {
                         Some(x) if x == from_column => {
                             if !is_from_swap {
+                                // this is invalid
                                 None
                             } else {
-                                Some(&None)
+                                Some(ActiveColumnStateData::Required)
                             }
-                        }
-                        x => Some(x),
+                        },
+                        x => Some(x.into()),
                     });
 
                     let before_cols = all_columns
                         .clone()
-                        .pad_using(min_cols, |_| &None)
-                        .take(*to_index)
-                        .map(Some);
+                        .pad_using(min_cols, |_| ActiveColumnStateData::Required)
+                        .take(*to_index);
 
-                    let after_cols = all_columns.skip(to_offset).map(Some);
+                    let tail = if !is_from_swap && from_index.is_some() && !has_blank_tail {
+                        Some(ActiveColumnStateData::Required)
+                    } else {
+                        None
+                    };
+
+                    let after_cols = all_columns.skip(to_offset).chain(tail);
                     self.to_active_column_state(Box::new(
                         before_cols
-                            .chain([None].iter().cloned())
-                            .chain(after_cols)
-                            .chain(tail),
+                            .chain(std::iter::once(ActiveColumnStateData::DragOver))
+                            .chain(after_cols),
                     ))
                 }
-            }
+            },
             _ => {
-                let tail = if has_blank_tail {
-                    [].iter().cloned()
+                let iter = self.config.columns.iter().map(|x| x.into());
+                self.to_active_column_state(if has_blank_tail {
+                    Box::new(iter)
                 } else {
-                    [Some(&None)].iter().cloned()
-                };
-
-                self.to_active_column_state(Box::new(
-                    self.config.columns.iter().map(Some).chain(tail),
-                ))
-            }
+                    Box::new(iter.chain(std::iter::once(ActiveColumnStateData::Required)))
+                })
+            },
         }
     }
 
     fn to_active_column_state(
         &'a self,
-        iter: Box<dyn Iterator<Item = Option<&'a Option<String>>> + 'a>,
+        iter: Box<dyn Iterator<Item = ActiveColumnStateData> + 'a>,
     ) -> impl Iterator<Item = ActiveColumnState> + 'a {
-        iter.pad_using(self.named_columns.len(), |_| Some(&None))
-            .enumerate()
-            .map(move |(idx, x)| {
-                let label = self.named_columns.get(idx).cloned();
-                match x {
-                    Some(None) => ActiveColumnState::Required(label),
-                    None => ActiveColumnState::DragOver(label),
-                    Some(Some(x)) => ActiveColumnState::Column(label, x.to_owned()),
-                }
-            })
+        iter.pad_using(self.named_columns.len(), |_| {
+            ActiveColumnStateData::Required
+        })
+        .enumerate()
+        .map(move |(idx, state)| {
+            let label = self.named_columns.get(idx).cloned();
+            ActiveColumnState { state, label }
+        })
     }
 
     /// Generate an iterator for inactive expressions.
@@ -263,7 +300,7 @@ impl<'a> ColumnsIteratorSet<'a> {
 
         if !is_active || is_swap_over.unwrap_or_default() {
             let col_type = self.session.metadata().get_column_table_type(name)?;
-            let is_visible = !dragover_col.map_or(false, |(_, x)| x == name);
+            let is_visible = dragover_col.is_none_or(|(_, x)| x != name);
             Some(OrderedColumn {
                 is_visible,
                 name,
@@ -278,7 +315,7 @@ impl<'a> ColumnsIteratorSet<'a> {
 pub struct OrderedColumn<'a> {
     pub is_visible: bool,
     pub name: &'a str,
-    col_type: Type,
+    col_type: ColumnType,
 }
 
 impl<'a> PartialEq for OrderedColumn<'a> {
@@ -287,7 +324,7 @@ impl<'a> PartialEq for OrderedColumn<'a> {
     }
 }
 
-impl<'a> Eq for OrderedColumn<'a> {}
+impl Eq for OrderedColumn<'_> {}
 
 impl<'a> PartialOrd for OrderedColumn<'a> {
     fn partial_cmp(&self, rhs: &OrderedColumn<'a>) -> Option<std::cmp::Ordering> {

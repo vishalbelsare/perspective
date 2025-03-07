@@ -1,43 +1,25 @@
-<!--
-   
-   Copyright (c) 2017, the Perspective Authors.
-   
-   This file is part of the Perspective library, distributed under the terms of
-   the Apache License 2.0.  The full license can be found in the LICENSE file.
-
--->
-
 <!DOCTYPE html>
 <html>
     <head>
-        <link
-            rel="shortcut icon"
-            href="data:image/x-icon;,"
-            type="image/x-icon"
-        />
-        <script type="module" src="lumino.js"></script>
-        <script type="module" src="perspective.js"></script>
-        <script type="module" src="perspective-viewer-datagrid.js"></script>
-
-        <link rel="stylesheet" href="demo.css" />
+        <script type="module" src="/node_modules/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js"></script>
+        <script type="module">
+            import { PerspectiveWidget } from "/node_modules/@finos/perspective-jupyterlab/dist/esm/lumino.js";
+            window.__WIDGET__ = new PerspectiveWidget();
+            document.getElementById("container").appendChild(window.__WIDGET__.node);
+            await import("/node_modules/@finos/perspective-test/load-viewer-csv.js");
+        </script>
+        <style>
+            perspective-viewer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+            }
+        </style>
     </head>
 
     <body>
-        <div id="container"></div>
-
-        <script type="module">
-            import perspective from "./perspective.js";
-            window.__WIDGET__ = new PerspectiveLumino.PerspectiveWidget();
-            document
-                .getElementById("container")
-                .appendChild(window.__WIDGET__.node);
-            const worker = perspective.worker();
-            (async () => {
-                const req = await fetch("superstore.csv");
-                const csv = await req.text();
-                const table = worker.table(csv);
-                window.__WIDGET__.load(table);
-            })();
-        </script>
+        <div id="container">hello</div>
     </body>
 </html>

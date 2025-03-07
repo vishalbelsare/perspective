@@ -1,31 +1,40 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use crate::components::*;
-use crate::utils::*;
-
-use derivative::Derivative;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use wasm_bindgen::prelude::*;
+
+use derivative::Derivative;
+use futures::Future;
+use perspective_js::utils::{global, *};
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::spawn_local;
+use wasm_bindgen::prelude::*;
 use web_sys::*;
+use yew::html::SendAsMessage;
 use yew::prelude::*;
+
+use crate::components::modal::*;
+use crate::utils::*;
 
 type BlurHandlerType = Rc<RefCell<Option<Closure<dyn FnMut(FocusEvent)>>>>;
 
 /// A `ModalElement` wraps the parameterized yew `Component` in a Custom
-/// Element. Via the `open()` and `close()` methods, a `ModalElement` can be
-/// positioned next to any existing on-page elements, accounting for viewport,
+/// Element.
+///
+/// Via the `open()` and `close()` methods, a `ModalElement` can be positioned
+/// next to any existing on-page elements, accounting for viewport,
 /// scroll position, etc.
 ///
-///`#[derive(Clone)]` generates the trait bound `T: Clone`, which is not
+/// `#[derive(Clone)]` generates the trait bound `T: Clone`, which is not
 /// required because `Scope<T>` implements Clone without this bound;  thus
 /// `Clone` must be implemented by the `derivative` crate's
 /// [custom bounds](https://mcarton.github.io/rust-derivative/latest/Debug.html#custom-bound)
@@ -38,16 +47,17 @@ where
     T::Properties: ModalLink<T>,
 {
     root: Rc<RefCell<Option<AppHandle<Modal<T>>>>>,
-    custom_element: HtmlElement,
+    pub custom_element: HtmlElement,
     target: Rc<RefCell<Option<HtmlElement>>>,
     blurhandler: BlurHandlerType,
     own_focus: bool,
     resize_sub: Rc<RefCell<Option<Subscription>>>,
     anchor: Rc<Cell<ModalAnchor>>,
+    on_blur: Option<Callback<()>>,
 }
 
 /// Anchor point enum, `ModalCornerTargetCorner`
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 enum ModalAnchor {
     BottomRightTopLeft,
     BottomRightBottomLeft,
@@ -55,23 +65,19 @@ enum ModalAnchor {
     BottomLeftTopLeft,
     TopRightTopLeft,
     TopRightBottomRight,
-    TopLeftBottomLeft,
-}
 
-impl Default for ModalAnchor {
-    fn default() -> ModalAnchor {
-        ModalAnchor::TopLeftBottomLeft
-    }
+    #[default]
+    TopLeftBottomLeft,
 }
 
 impl ModalAnchor {
     const fn is_rev_vert(&self) -> bool {
         matches!(
             self,
-            ModalAnchor::BottomLeftTopLeft
-                | ModalAnchor::BottomRightBottomLeft
-                | ModalAnchor::BottomRightTopLeft
-                | ModalAnchor::BottomRightTopRight
+            Self::BottomLeftTopLeft
+                | Self::BottomRightBottomLeft
+                | Self::BottomRightTopLeft
+                | Self::BottomRightTopRight
         )
     }
 }
@@ -82,19 +88,19 @@ impl ModalAnchor {
 /// coordinates that keeps the element on-screen.
 fn calc_relative_position(
     elem: &HtmlElement,
-    _top: i32,
-    left: i32,
-    height: i32,
-    width: i32,
+    _top: f64,
+    left: f64,
+    height: f64,
+    width: f64,
 ) -> ModalAnchor {
-    let window = web_sys::window().unwrap();
+    let window = global::window();
     let rect = elem.get_bounding_client_rect();
-    let inner_width = window.inner_width().unwrap().as_f64().unwrap() as i32;
-    let inner_height = window.inner_height().unwrap().as_f64().unwrap() as i32;
-    let rect_top = rect.top() as i32;
-    let rect_height = rect.height() as i32;
-    let rect_width = rect.width() as i32;
-    let rect_left = rect.left() as i32;
+    let inner_width = window.inner_width().unwrap().as_f64().unwrap();
+    let inner_height = window.inner_height().unwrap().as_f64().unwrap();
+    let rect_top = rect.top();
+    let rect_height = rect.height();
+    let rect_width = rect.width();
+    let rect_left = rect.left();
 
     let elem_over_y = inner_height < rect_top + rect_height;
     let elem_over_x = inner_width < rect_left + rect_width;
@@ -106,21 +112,21 @@ fn calc_relative_position(
         (true, _, true, true) => ModalAnchor::BottomRightTopLeft,
         (true, _, true, false) => ModalAnchor::BottomRightBottomLeft,
         (true, true, false, _) => {
-            if left + width - rect_width > 0 {
+            if left + width - rect_width > 0.0 {
                 ModalAnchor::BottomRightTopRight
             } else {
                 ModalAnchor::BottomLeftTopLeft
             }
-        }
+        },
         (true, false, false, _) => ModalAnchor::BottomLeftTopLeft,
         (false, true, true, _) => ModalAnchor::TopRightTopLeft,
         (false, true, false, _) => {
-            if left + width - rect_width > 0 {
+            if left + width - rect_width > 0.0 {
                 ModalAnchor::TopRightBottomRight
             } else {
                 ModalAnchor::TopLeftBottomLeft
             }
-        }
+        },
         _ => ModalAnchor::TopLeftBottomLeft,
     }
 }
@@ -134,7 +140,8 @@ where
         custom_element: web_sys::HtmlElement,
         props: T::Properties,
         own_focus: bool,
-    ) -> ModalElement<T> {
+        on_blur: Option<Callback<()>>,
+    ) -> Self {
         custom_element.set_attribute("tabindex", "0").unwrap();
         let init = web_sys::ShadowRootInit::new(web_sys::ShadowRootMode::Open);
         let shadow_root = custom_element
@@ -142,18 +149,18 @@ where
             .unwrap()
             .unchecked_into::<web_sys::Element>();
 
-        let cprops = ModalProps {
+        let cprops = yew::props!(ModalProps<T> {
             child: Some(html_nested! {
                 <T ..props />
             }),
-        };
+        });
 
         let root = Rc::new(RefCell::new(Some(
             yew::Renderer::with_root_and_props(shadow_root, cprops).render(),
         )));
 
         let blurhandler = Rc::new(RefCell::new(None));
-        ModalElement {
+        Self {
             root,
             custom_element,
             target: Rc::new(RefCell::new(None)),
@@ -161,62 +168,57 @@ where
             blurhandler,
             resize_sub: Rc::new(RefCell::new(None)),
             anchor: Default::default(),
+            on_blur,
         }
     }
 
-    fn calc_anchor_position(&self, target: &HtmlElement) -> (i32, i32) {
-        let height = target.offset_height() as i32;
-        let width = target.offset_width() as i32;
-        let elem = target.clone().unchecked_into::<HtmlElement>();
+    fn calc_anchor_position(&self, target: &HtmlElement) -> (f64, f64) {
+        let elem = target.unchecked_ref::<HtmlElement>();
         let rect = elem.get_bounding_client_rect();
-        let top = rect.top() as i32;
-        let left = rect.left() as i32;
+        let height = rect.height();
+        let width = rect.width();
+        let top = rect.top();
+        let left = rect.left();
 
         let self_rect = self.custom_element.get_bounding_client_rect();
-        let rect_height = self_rect.height() as i32;
-        let rect_width = self_rect.width() as i32;
+        let rect_height = self_rect.height();
+        let rect_width = self_rect.width();
 
         match self.anchor.get() {
-            ModalAnchor::BottomRightTopLeft => (top - rect_height, left - rect_width + 1),
+            ModalAnchor::BottomRightTopLeft => (top - rect_height, left - rect_width + 1.0),
             ModalAnchor::BottomRightBottomLeft => {
-                (top - rect_height + height, left - rect_width + 1)
-            }
-            ModalAnchor::BottomRightTopRight => (top - rect_height + 1, left + width - rect_width),
-            ModalAnchor::BottomLeftTopLeft => (top - rect_height + 1, left),
-            ModalAnchor::TopRightTopLeft => (top, left - rect_width + 1),
-            ModalAnchor::TopRightBottomRight => (top + height - 1, left + width - rect_width),
-            ModalAnchor::TopLeftBottomLeft => ((top + height - 1), left),
+                (top - rect_height + height, left - rect_width + 1.0)
+            },
+            ModalAnchor::BottomRightTopRight => {
+                (top - rect_height + 1.0, left + width - rect_width)
+            },
+            ModalAnchor::BottomLeftTopLeft => (top - rect_height + 1.0, left),
+            ModalAnchor::TopRightTopLeft => (top, left - rect_width + 1.0),
+            ModalAnchor::TopRightBottomRight => (top + height - 1.0, left + width - rect_width),
+            ModalAnchor::TopLeftBottomLeft => ((top + height - 1.0), left),
         }
     }
 
-    async fn open_within_viewport(&self, target: HtmlElement) -> Result<(), JsValue> {
-        let height = target.offset_height() as i32;
-        let width = target.offset_width() as i32;
-        let elem = target.clone().unchecked_into::<HtmlElement>();
+    async fn open_within_viewport(&self, target: HtmlElement) -> ApiResult<()> {
+        let elem = target.unchecked_ref::<HtmlElement>();
         let rect = elem.get_bounding_client_rect();
-        let top = rect.top() as i32;
-        let left = rect.left() as i32;
+        let width = rect.width();
+        let height = rect.height();
+        let top = rect.top();
+        let left = rect.left();
         *self.target.borrow_mut() = Some(target.clone());
 
         // Default, top left/bottom left
         let msg = ModalMsg::SetPos {
-            top: (top + height - 1) as i32,
-            left: left as i32,
+            top: top + height - 1.0,
+            left,
             visible: false,
             rev_vert: false,
         };
 
         self.root.borrow().as_ref().unwrap().send_message(msg);
-
-        let window = web_sys::window().unwrap();
-        window
-            .document()
-            .unwrap()
-            .body()
-            .unwrap()
-            .append_child(&self.custom_element)?;
-
-        await_animation_frame().await?;
+        global::body().append_child(&self.custom_element)?;
+        request_animation_frame().await;
 
         // Check if the modal has been positioned off-screen and re-locate if necessary
         self.anchor.set(calc_relative_position(
@@ -239,9 +241,14 @@ where
 
         if self.own_focus {
             let mut this = Some(self.clone());
-            *self.blurhandler.borrow_mut() = Some(
-                (move |_| this.take().and_then(|x| x.hide().ok()).unwrap_or(())).into_closure_mut(),
-            );
+            *self.blurhandler.borrow_mut() = Some(Closure::new(move |_| {
+                this.take().and_then(|x| x.hide().ok()).unwrap_or(())
+            }));
+
+            self.custom_element
+                .dataset()
+                .set("poscorrected", "true")
+                .unwrap();
 
             self.custom_element.add_event_listener_with_callback(
                 "blur",
@@ -253,7 +260,7 @@ where
                     .unchecked_ref(),
             )?;
 
-            self.custom_element.focus()
+            Ok(self.custom_element.focus()?)
         } else {
             Ok(())
         }
@@ -275,13 +282,29 @@ where
             .send_message_batch(msgs.into_iter().map(ModalMsg::SubMsg).collect())
     }
 
+    pub fn send_future_batch<Fut>(&self, future: Fut)
+    where
+        Fut: Future + 'static,
+        Fut::Output: SendAsMessage<Modal<T>>,
+    {
+        self.root
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .send_future_batch(future)
+    }
+
     /// Open this modal by attaching directly to `document.body` with position
     /// absolutely positioned relative to an alread-connected `target`
     /// element.
     ///
     /// Because the Custom Element has a `blur` handler, we must invoke this
     /// before attempting to re-parent the element.
-    pub fn open(&self, target: web_sys::HtmlElement, resize_pubsub: Option<&PubSub<()>>) {
+    pub async fn open(
+        self,
+        target: web_sys::HtmlElement,
+        resize_pubsub: Option<&PubSub<()>>,
+    ) -> ApiResult<()> {
         if let Some(resize) = resize_pubsub {
             let this = self.clone();
             let target = target.clone();
@@ -299,19 +322,14 @@ where
             }));
         };
 
-        if !self.is_open() {
-            self.custom_element.blur().unwrap();
-            let this = self.clone();
-            spawn_local(async move {
-                await_animation_frame().await.unwrap();
-                target.class_list().add_1("modal-target").unwrap();
-                let theme = get_theme(&target);
-                this.open_within_viewport(target).await.unwrap();
-                if let Some(theme) = theme {
-                    this.custom_element.set_attribute("theme", &theme).unwrap();
-                }
-            });
+        target.class_list().add_1("modal-target").unwrap();
+        let theme = get_theme(&target);
+        self.open_within_viewport(target).await.unwrap();
+        if let Some(theme) = theme {
+            self.custom_element.set_attribute("theme", &theme).unwrap();
         }
+
+        Ok(())
     }
 
     pub fn is_open(&self) -> bool {
@@ -319,7 +337,7 @@ where
     }
 
     /// Remove from document.
-    pub fn hide(&self) -> Result<(), JsValue> {
+    pub fn hide(&self) -> ApiResult<()> {
         if self.is_open() {
             if self.own_focus {
                 self.custom_element.remove_event_listener_with_callback(
@@ -335,13 +353,10 @@ where
                 *self.blurhandler.borrow_mut() = None;
             }
 
-            web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .body()
-                .unwrap()
-                .remove_child(&self.custom_element)?;
+            global::body().remove_child(&self.custom_element)?;
+            if let Some(blur) = &self.on_blur {
+                blur.emit(());
+            }
 
             let target = self.target.borrow_mut().take().unwrap();
             let event = web_sys::CustomEvent::new("-perspective-close-expression")?;
@@ -357,7 +372,7 @@ where
     }
 
     /// Remove from document and cleanup.
-    pub fn destroy(self) -> Result<(), JsValue> {
+    pub fn destroy(self) -> ApiResult<()> {
         self.hide()?;
         self.root.borrow_mut().take().unwrap().destroy();
         Ok(())
@@ -365,7 +380,7 @@ where
 }
 
 fn get_theme(elem: &HtmlElement) -> Option<String> {
-    let styles = window().unwrap().get_computed_style(elem).unwrap().unwrap();
+    let styles = global::window().get_computed_style(elem).unwrap().unwrap();
     styles
         .get_property_value("--theme-name")
         .ok()

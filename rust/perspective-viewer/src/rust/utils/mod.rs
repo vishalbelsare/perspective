@@ -1,45 +1,48 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 //! A catch all for project-wide macros and general-purpose functions that are
-//! not directly related to Perspective.  Modules below `crate::utils` strive
-//! to be single-responsibility, but some reference other `crate::utils`
-//! modules when it helps reduce boiler-plate.
+//! not directly related to Perspective.
+//!
+//! Modules below `crate::utils` strive to be single-responsibility, but some
+//! reference other `crate::utils` modules when it helps reduce boiler-plate.
 
-mod api_future;
-mod async_callback;
-mod blob;
-mod closure;
+mod browser;
+
+mod custom_element;
 mod datetime;
 mod debounce;
-mod download;
-mod errors;
-mod js_object;
+mod hooks;
+mod number_format;
 mod pubsub;
-mod request_animation_frame;
 mod scope;
+mod tee;
+mod wasm_abi;
 mod weak_scope;
 
 #[cfg(test)]
 mod tests;
 
-pub use self::api_future::*;
-pub use self::async_callback::*;
-pub use self::blob::*;
-pub use self::closure::*;
-pub use self::datetime::*;
-pub use self::debounce::*;
-pub use self::download::*;
-pub use self::errors::*;
-pub use self::pubsub::*;
-pub use self::request_animation_frame::*;
-pub use self::scope::*;
-pub use self::weak_scope::*;
+pub use browser::*;
+pub use custom_element::*;
+pub use datetime::*;
+pub use debounce::*;
+pub use hooks::*;
+pub use number_format::*;
+pub use perspective_client::clone;
+pub use pubsub::*;
+pub use scope::*;
+pub use tee::*;
+pub use weak_scope::*;
 
 #[macro_export]
 macro_rules! maybe {
@@ -66,43 +69,8 @@ macro_rules! js_log_maybe {
                 Ok(())
             }
         })();
-        x.unwrap_or_else(|e| web_sys::console::error_1(&e))
+        x.unwrap_or_else(|e| web_sys::console::warn_1(&e))
     }};
-}
-
-/// A helper to for the pattern `let x2 = x;` necessary to clone structs
-/// destined for an `async` or `'static` closure stack.  This is like `move || {
-/// .. }` or `move async { .. }`, but for clone semantics.
-#[macro_export]
-macro_rules! clone {
-    ($i:ident) => {
-        let $i = $i.clone();
-    };
-    ($i:ident, $($tt:tt)*) => {
-        clone!($i);
-        clone!($($tt)*);
-    };
-    ($this:ident . $i:ident) => {
-        let $i = $this.$i.clone();
-    };
-    ($this:ident . $i:ident, $($tt:tt)*) => {
-        clone!($this . $i);
-        clone!($($tt)*);
-    };
-    ($this:ident . $borrow:ident() . $i:ident) => {
-        let $i = $this.$borrow().$i.clone();
-    };
-    ($this:ident . $borrow:ident() . $i:ident, $($tt:tt)*) => {
-        clone!($this.$borrow().$i);
-        clone!($($tt)*);
-    };
-    ($this:ident . $borrow:ident()) => {
-        let $borrow = $this.$borrow().clone();
-    };
-    ($this:ident . $borrow:ident(), $($tt:tt)*) => {
-        clone!($this.$borrow());
-        clone!($($tt)*);
-    };
 }
 
 #[macro_export]
@@ -131,4 +99,16 @@ macro_rules! min {
             y
         }
     }}
+}
+
+#[macro_export]
+macro_rules! js_log {
+    ($x:expr) => {{
+        const DEBUG_ONLY_WARNING: &str = $x;
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from($x));
+    }};
+    ($x:expr $(, $y:expr)*) => {{
+        const DEBUG_ONLY_WARNING: &str = $x;
+        web_sys::console::log_1(&format!($x, $($y),*).into());
+    }};
 }

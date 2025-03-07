@@ -1,26 +1,41 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+use std::cell::RefCell;
+use std::future::Future;
+use std::rc::Rc;
+
+use perspective_client::clone;
+use perspective_js::utils::global;
+use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
 
 use super::mimetype::*;
 use crate::js::clipboard_item::*;
 use crate::*;
 
-use std::cell::RefCell;
-use std::future::Future;
-use std::rc::Rc;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
+pub async fn paste_from_clipboard() -> Option<String> {
+    JsFuture::from(global::clipboard().read_text())
+        .await
+        .ok()
+        .and_then(|x| x.as_string())
+}
 
 /// Copy a `JsPerspectiveView` to the clipboard as a CSV.
 pub fn copy_to_clipboard(
-    view: impl Future<Output = Result<web_sys::Blob, JsValue>>,
+    view: impl Future<Output = Result<web_sys::Blob, ApiError>>,
     mimetype: MimeType,
-) -> impl Future<Output = Result<(), JsValue>> {
+) -> impl Future<Output = ApiResult<()>> {
     let js_ref: Rc<RefCell<Option<web_sys::Blob>>> = Rc::new(RefCell::new(None));
     poll(0, mimetype, js_ref.clone()).unwrap();
     async move {
@@ -37,27 +52,25 @@ fn poll(
     count: u32,
     mimetype: MimeType,
     js_ref: Rc<RefCell<Option<web_sys::Blob>>>,
-) -> Result<(), JsValue> {
+) -> ApiResult<()> {
     if let Some(js_val) = js_ref.borrow().as_ref() {
         let options = js_sys::Object::new();
         js_sys::Reflect::set(&options, &mimetype.into(), js_val)?;
         let item = ClipboardItem::new(&options);
-        let items = [item].iter().collect::<js_sys::Array>();
-        let _promise = web_sys::window()
-            .unwrap()
-            .navigator()
-            .clipboard()
-            .write(&items.into());
+        let items = std::iter::once(item).collect::<js_sys::Array>();
+        let _promise = global::clipboard().write(&items.into());
     } else {
         clone!(js_ref);
+        if count == 200 {
+            tracing::warn!("Clipboard handler surpassed 10s");
+        }
+
         let f: js_sys::Function =
             Closure::once(Box::new(move || poll(count + 1, mimetype, js_ref)))
                 .into_js_value()
                 .unchecked_into();
 
-        web_sys::window()
-            .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&f, 50)?;
+        global::window().set_timeout_with_callback_and_timeout_and_arguments_0(&f, 50)?;
     }
 
     Ok(())

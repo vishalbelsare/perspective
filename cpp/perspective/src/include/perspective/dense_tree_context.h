@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 #include <perspective/first.h>
@@ -20,9 +23,12 @@ namespace perspective {
 
 class PERSPECTIVE_EXPORT t_dtree_ctx {
 public:
-    t_dtree_ctx(std::shared_ptr<const t_data_table> strands,
-        std::shared_ptr<const t_data_table> strand_deltas, const t_dtree& tree,
-        const std::vector<t_aggspec>& aggspecs);
+    t_dtree_ctx(
+        std::shared_ptr<const t_data_table> strands,
+        std::shared_ptr<const t_data_table> strand_deltas,
+        const t_dtree& tree,
+        const std::vector<t_aggspec>& aggspecs
+    );
     void init();
     const t_data_table& get_aggtable() const;
     const t_dtree& get_tree() const;
@@ -30,8 +36,8 @@ public:
     const t_aggspec& get_aggspec(const std::string& aggname) const;
     void pprint(const t_filter& fltr) const;
 
-    std::pair<const t_uindex*, const t_uindex*> get_leaf_iterators(
-        t_index idx) const;
+    std::pair<const t_uindex*, const t_uindex*> get_leaf_iterators(t_index idx
+    ) const;
 
     std::shared_ptr<const t_column> get_pkey_col() const;
     std::shared_ptr<const t_column> get_strand_count_col() const;

@@ -1,10 +1,14 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 //! A simple "structurally-typed" method extension implementation.  This
 //! collection of `trait`s allows methods to be automatically defined for
@@ -12,9 +16,9 @@
 //! objects (which are conviently derivable with the `derive_model!` macro).
 
 use crate::dragdrop::*;
+use crate::presentation::*;
 use crate::renderer::*;
 use crate::session::*;
-use crate::theme::*;
 
 pub trait HasSession {
     fn session(&self) -> &'_ Session;
@@ -24,8 +28,8 @@ pub trait HasRenderer {
     fn renderer(&self) -> &'_ Renderer;
 }
 
-pub trait HasTheme {
-    fn theme(&self) -> &'_ Theme;
+pub trait HasPresentation {
+    fn presentation(&self) -> &'_ Presentation;
 }
 
 pub trait HasDragDrop {
@@ -55,10 +59,10 @@ macro_rules! derive_model {
             }
         }
     };
-    (Theme for $key:ty) => {
-        impl $crate::model::HasTheme for $key {
-            fn theme(&self) -> &'_ Theme {
-                &self.theme
+    (Presentation for $key:ty) => {
+        impl $crate::model::HasPresentation for $key {
+            fn presentation(&self) -> &'_ Presentation {
+                &self.presentation
             }
         }
     };

@@ -1,31 +1,56 @@
 {
-    "name": "@finos/docs",
+    "name": "@finos/perspective-docs",
+    "version": "3.4.0",
     "private": true,
-    "version": "1.4.0",
     "scripts": {
-        "theme": "lessc static/css/material-dark.less > static/css/material-dark.css",
-        "examples": "docusaurus-examples",
-        "start": "npm run build:arrow && npm run theme && docusaurus-start",
-        "build": ":",
-        "clean": "rimraf dist",
-        "build:arrow": "cpy ../node_modules/superstore-arrow/superstore.arrow static/arrow/",
-        "build:webpack": "webpack --config webpack.config.js --color",
-        "docs": "npm run build:webpack && npm run theme && docusaurus-build",
-        "publish-gh-pages": "npm run theme && docusaurus-publish",
-        "write-translations": "docusaurus-write-translations"
-    },
-    "devDependencies": {
-        "@finos/perspective": "^1.4.0",
-        "@finos/perspective-viewer": "^1.4.0",
-        "@finos/perspective-viewer-d3fc": "^1.4.0",
-        "@finos/perspective-viewer-datagrid": "^1.4.0",
-        "@finos/perspective-workspace": "^1.4.0",
-        "docusaurus": "^1.8.0",
-        "less": "^3.9.0"
+        "build": "node build.js && docusaurus build",
+        "docusaurus": "docusaurus",
+        "start": "docusaurus start",
+        "docs": "node build.js && docusaurus build",
+        "swizzle": "docusaurus swizzle",
+        "deploy": "docusaurus deploy",
+        "clean": "docusaurus clear",
+        "serve": "docusaurus serve",
+        "write-translations": "docusaurus write-translations",
+        "write-heading-ids": "docusaurus write-heading-ids"
     },
     "dependencies": {
-        "@babel/preset-react": "^7.8.3",
-        "lit-html": "^1.1.2",
-        "react": "^16.8.6"
+        "@docusaurus/core": "^3.7.0",
+        "@docusaurus/preset-classic": "^3.7.0",
+        "@finos/perspective": "workspace:^",
+        "@finos/perspective-viewer": "workspace:^",
+        "@finos/perspective-viewer-d3fc": "workspace:^",
+        "@finos/perspective-viewer-datagrid": "workspace:^",
+        "@mdx-js/react": "^3.0.0",
+        "blocks": "workspace:^",
+        "clsx": "^2.0.0",
+        "mkdirp": "3",
+        "prism-react-renderer": "^1.3.3",
+        "puppeteer": "^23",
+        "react": "^18",
+        "react-dom": "^18",
+        "superstore-arrow": "3.0.0"
+    },
+    "devDependencies": {
+        "arraybuffer-loader": "^1.0.2",
+        "@docusaurus/module-type-aliases": "^3.7.0",
+        "@docusaurus/tsconfig": "^3.7.0",
+        "@docusaurus/types": "^3.7.0",
+        "typescript": "~5.2.2"
+    },
+    "peerDependencies": {
+        "@docusaurus/theme-common": "^3.7.0"
+    },
+    "browserslist": {
+        "production": [
+            ">0.5%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
     }
 }

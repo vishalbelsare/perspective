@@ -1,48 +1,113 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use super::column_selector::ColumnSelector;
-use super::config_selector::ConfigSelector;
-use super::containers::split_panel::SplitPanel;
-use super::font_loader::{FontLoader, FontLoaderProps, FontLoaderStatus};
-use super::plugin_selector::PluginSelector;
-use super::render_warning::RenderWarning;
-use super::status_bar::StatusBar;
-
-use crate::config::*;
-use crate::dragdrop::*;
-use crate::model::*;
-use crate::renderer::*;
-use crate::session::*;
-use crate::theme::Theme;
-use crate::utils::*;
-use crate::*;
+use std::rc::Rc;
 
 use futures::channel::oneshot::*;
-use std::rc::Rc;
+use perspective_client::ColumnType;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
-pub static CSS: &str = include_str!("../../../build/css/viewer.css");
+use super::column_selector::ColumnSelector;
+use super::containers::split_panel::SplitPanel;
+use super::font_loader::{FontLoader, FontLoaderProps, FontLoaderStatus};
+use super::form::debug::DebugPanel;
+use super::plugin_selector::PluginSelector;
+use super::render_warning::RenderWarning;
+use super::status_bar::StatusBar;
+use super::style::{LocalStyle, StyleProvider};
+use crate::components::column_settings_sidebar::ColumnSettingsSidebar;
+use crate::components::containers::sidebar::SidebarCloseButton;
+use crate::config::*;
+use crate::custom_events::CustomEvents;
+use crate::dragdrop::*;
+use crate::model::*;
+use crate::presentation::Presentation;
+use crate::renderer::*;
+use crate::session::*;
+use crate::utils::*;
+use crate::*;
+
+/// Locates a view column.
+/// Table columns are those defined on the table, but their types will reflect
+/// the view type, not the table type.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ColumnLocator {
+    Table(String),
+    Expression(String),
+    NewExpression,
+}
+impl ColumnLocator {
+    /// Pulls the column's name from the locator.
+    /// If the column is a new expression which has yet to be saved, the
+    /// function will return None.
+    pub fn name(&self) -> Option<&String> {
+        match self {
+            Self::Table(s) | Self::Expression(s) => Some(s),
+            Self::NewExpression => None,
+        }
+    }
+
+    pub fn name_or_default(&self, session: &Session) -> String {
+        match self {
+            Self::Table(s) | Self::Expression(s) => s.clone(),
+            Self::NewExpression => session.metadata().make_new_column_name(None),
+        }
+    }
+
+    pub fn is_active(&self, session: &Session) -> bool {
+        self.name()
+            .map(|name| session.is_column_active(name))
+            .unwrap_or_default()
+    }
+
+    #[inline(always)]
+    pub fn is_saved_expr(&self) -> bool {
+        matches!(self, ColumnLocator::Expression(_))
+    }
+
+    #[inline(always)]
+    pub fn is_expr(&self) -> bool {
+        matches!(
+            self,
+            ColumnLocator::Expression(_) | ColumnLocator::NewExpression
+        )
+    }
+
+    #[inline(always)]
+    pub fn is_new_expr(&self) -> bool {
+        matches!(self, ColumnLocator::NewExpression)
+    }
+
+    pub fn view_type(&self, session: &Session) -> Option<ColumnType> {
+        let name = self.name().cloned().unwrap_or_default();
+        session.metadata().get_column_view_type(name.as_str())
+    }
+}
 
 #[derive(Properties)]
 pub struct PerspectiveViewerProps {
     pub elem: web_sys::HtmlElement,
     pub session: Session,
     pub renderer: Renderer,
-    pub theme: Theme,
+    pub presentation: Presentation,
     pub dragdrop: DragDrop,
+    pub custom_events: CustomEvents,
 
     #[prop_or_default]
     pub weak_link: WeakScope<PerspectiveViewer>,
 }
 
-derive_model!(Renderer, Session for PerspectiveViewerProps);
+derive_model!(Renderer, Session, Presentation for PerspectiveViewerProps);
 
 impl PartialEq for PerspectiveViewerProps {
     fn eq(&self, _rhs: &Self) -> bool {
@@ -50,16 +115,28 @@ impl PartialEq for PerspectiveViewerProps {
     }
 }
 
-pub enum Msg {
+impl PerspectiveViewerProps {
+    fn is_title(&self) -> bool {
+        !self.presentation.get_is_workspace() && self.presentation.get_title().is_some()
+    }
+}
+
+#[derive(Debug)]
+pub enum PerspectiveViewerMsg {
     Resize,
     Reset(bool, Option<Sender<()>>),
-    ToggleSettingsInit(
-        Option<SettingsUpdate>,
-        Option<Sender<Result<JsValue, JsValue>>>,
-    ),
+    ToggleSettingsInit(Option<SettingsUpdate>, Option<Sender<ApiResult<JsValue>>>),
     ToggleSettingsComplete(SettingsUpdate, Sender<()>),
+    ToggleDebug,
     PreloadFontsUpdate,
     RenderLimits(Option<(usize, usize, Option<usize>, Option<usize>)>),
+    SettingsPanelSizeUpdate(Option<i32>),
+    ColumnSettingsPanelSizeUpdate(Option<i32>),
+    OpenColumnSettings {
+        locator: Option<ColumnLocator>,
+        sender: Option<Sender<()>>,
+        toggle: bool,
+    },
 }
 
 pub struct PerspectiveViewer {
@@ -67,114 +144,263 @@ pub struct PerspectiveViewer {
     on_rendered: Option<Sender<()>>,
     fonts: FontLoaderProps,
     settings_open: bool,
+    debug_open: bool,
+    /// The column which will be opened in the ColumnSettingsSidebar
+    selected_column: Option<ColumnLocator>,
+    selected_column_is_active: bool, // TODO: should we use a struct?
     on_resize: Rc<PubSub<()>>,
     on_dimensions_reset: Rc<PubSub<()>>,
     _subscriptions: [Subscription; 1],
+    settings_panel_width_override: Option<i32>,
+    column_settings_panel_width_override: Option<i32>,
+
+    on_close_column_settings: Callback<()>,
 }
 
 impl Component for PerspectiveViewer {
-    type Message = Msg;
+    type Message = PerspectiveViewerMsg;
     type Properties = PerspectiveViewerProps;
+
     fn create(ctx: &Context<Self>) -> Self {
         *ctx.props().weak_link.borrow_mut() = Some(ctx.link().clone());
         let elem = ctx.props().elem.clone();
-        let callback = ctx.link().callback(|()| Msg::PreloadFontsUpdate);
-        let limit_sub = {
-            let callback = ctx.link().callback(|x| Msg::RenderLimits(Some(x)));
-            ctx.props().renderer.limits_changed.add_listener(callback)
+        let callback = ctx
+            .link()
+            .callback(|()| PerspectiveViewerMsg::PreloadFontsUpdate);
+
+        let session_sub = {
+            clone!(
+                ctx.props().presentation,
+                ctx.props().session,
+                plugin_query = ctx.props().get_plugin_column_styles_query()
+            );
+            let callback = ctx.link().batch_callback(move |(update, render_limits)| {
+                if update {
+                    vec![PerspectiveViewerMsg::RenderLimits(Some(render_limits))]
+                } else {
+                    let locator =
+                        presentation
+                            .get_open_column_settings()
+                            .locator
+                            .filter(|locator| match &locator {
+                                ColumnLocator::Table(name) => {
+                                    locator.is_active(&session)
+                                        && plugin_query
+                                            .can_render_column_styles(name)
+                                            .unwrap_or_default()
+                                },
+                                _ => true,
+                            });
+
+                    vec![
+                        PerspectiveViewerMsg::RenderLimits(Some(render_limits)),
+                        PerspectiveViewerMsg::OpenColumnSettings {
+                            locator,
+                            sender: None,
+                            toggle: false,
+                        },
+                    ]
+                }
+            });
+            ctx.props()
+                .renderer
+                .render_limits_changed
+                .add_listener(callback)
         };
+
+        let on_close_column_settings =
+            ctx.link()
+                .callback(|_| PerspectiveViewerMsg::OpenColumnSettings {
+                    locator: None,
+                    sender: None,
+                    toggle: false,
+                });
 
         Self {
             dimensions: None,
             on_rendered: None,
             fonts: FontLoaderProps::new(&elem, callback),
             settings_open: false,
+            debug_open: false,
+            selected_column: None,
+            selected_column_is_active: false,
             on_resize: Default::default(),
             on_dimensions_reset: Default::default(),
-            _subscriptions: [limit_sub],
+            _subscriptions: [session_sub],
+            settings_panel_width_override: None,
+            column_settings_panel_width_override: None,
+            on_close_column_settings,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let needs_update = self.selected_column.is_some();
         match msg {
-            Msg::PreloadFontsUpdate => true,
-            Msg::Resize => {
-                self.on_resize.emit_all(());
+            PerspectiveViewerMsg::PreloadFontsUpdate => true,
+            PerspectiveViewerMsg::Resize => {
+                self.on_resize.emit(());
                 false
-            }
-            Msg::Reset(all, sender) => {
-                clone!(ctx.props().renderer, ctx.props().session, ctx.props().theme);
-                ApiFuture::spawn(async move {
-                    session.reset(all);
-                    renderer.reset().await;
-                    theme.reset(None).await;
-                    let result = renderer.draw(session.validate().await?.create_view()).await;
+            },
+            PerspectiveViewerMsg::Reset(all, sender) => {
+                self.selected_column = None;
+                clone!(
+                    ctx.props().renderer,
+                    ctx.props().session,
+                    ctx.props().presentation
+                );
 
+                ApiFuture::spawn(async move {
+                    session.reset(all).await?;
+                    let columns_config = if all {
+                        presentation.reset_columns_configs();
+                        None
+                    } else {
+                        Some(presentation.all_columns_configs())
+                    };
+
+                    renderer.reset(columns_config.as_ref()).await?;
+                    presentation.reset_available_themes(None).await;
+                    let result = renderer.draw(session.validate().await?.create_view()).await;
                     if let Some(sender) = sender {
                         sender.send(()).unwrap();
                     }
 
+                    renderer.reset_changed.emit(());
                     result
                 });
 
-                false
-            }
-            Msg::ToggleSettingsInit(Some(SettingsUpdate::Missing), None) => false,
-            Msg::ToggleSettingsInit(Some(SettingsUpdate::Missing), Some(resolve)) => {
+                needs_update
+            },
+            PerspectiveViewerMsg::ToggleDebug => {
+                self.debug_open = !self.debug_open;
+                clone!(ctx.props().renderer, ctx.props().session);
+                ApiFuture::spawn(async move {
+                    renderer.draw(session.validate().await?.create_view()).await
+                });
+
+                true
+            },
+            PerspectiveViewerMsg::ToggleSettingsInit(Some(SettingsUpdate::Missing), None) => false,
+            PerspectiveViewerMsg::ToggleSettingsInit(
+                Some(SettingsUpdate::Missing),
+                Some(resolve),
+            ) => {
                 resolve.send(Ok(JsValue::UNDEFINED)).unwrap();
                 false
-            }
-            Msg::ToggleSettingsInit(Some(SettingsUpdate::SetDefault), resolve) => {
+            },
+            PerspectiveViewerMsg::ToggleSettingsInit(Some(SettingsUpdate::SetDefault), resolve) => {
                 self.init_toggle_settings_task(ctx, Some(false), resolve);
                 false
-            }
-            Msg::ToggleSettingsInit(Some(SettingsUpdate::Update(force)), resolve) => {
+            },
+            PerspectiveViewerMsg::ToggleSettingsInit(
+                Some(SettingsUpdate::Update(force)),
+                resolve,
+            ) => {
                 self.init_toggle_settings_task(ctx, Some(force), resolve);
                 false
-            }
-            Msg::ToggleSettingsInit(None, resolve) => {
+            },
+            PerspectiveViewerMsg::ToggleSettingsInit(None, resolve) => {
                 self.init_toggle_settings_task(ctx, None, resolve);
                 false
-            }
-            Msg::ToggleSettingsComplete(SettingsUpdate::SetDefault, resolve)
+            },
+            PerspectiveViewerMsg::ToggleSettingsComplete(SettingsUpdate::SetDefault, resolve)
                 if self.settings_open =>
             {
+                self.selected_column = None;
                 self.settings_open = false;
                 self.on_rendered = Some(resolve);
                 true
-            }
-            Msg::ToggleSettingsComplete(SettingsUpdate::Update(force), resolve)
-                if force != self.settings_open =>
-            {
+            },
+            PerspectiveViewerMsg::ToggleSettingsComplete(
+                SettingsUpdate::Update(force),
+                resolve,
+            ) if force != self.settings_open => {
+                self.selected_column = None;
                 self.settings_open = force;
                 self.on_rendered = Some(resolve);
                 true
-            }
-            Msg::ToggleSettingsComplete(_, resolve)
+            },
+            PerspectiveViewerMsg::ToggleSettingsComplete(_, resolve)
                 if matches!(self.fonts.get_status(), FontLoaderStatus::Finished) =>
             {
+                self.selected_column = None;
                 resolve.send(()).expect("Orphan render");
                 false
-            }
-            Msg::ToggleSettingsComplete(_, resolve) => {
+            },
+            PerspectiveViewerMsg::ToggleSettingsComplete(_, resolve) => {
+                self.selected_column = None;
                 self.on_rendered = Some(resolve);
                 true
-            }
-            Msg::RenderLimits(dimensions) => {
+            },
+            PerspectiveViewerMsg::RenderLimits(dimensions) => {
                 if self.dimensions != dimensions {
                     self.dimensions = dimensions;
                     true
                 } else {
                     false
                 }
-            }
+            },
+            PerspectiveViewerMsg::OpenColumnSettings {
+                locator,
+                sender,
+                toggle,
+            } => {
+                let is_active = locator
+                    .as_ref()
+                    .map(|l| l.is_active(&ctx.props().session))
+                    .unwrap_or_default();
+
+                self.selected_column_is_active = is_active;
+                if toggle && self.selected_column == locator {
+                    self.selected_column = None;
+                    (false, None)
+                } else {
+                    self.selected_column.clone_from(&locator);
+
+                    locator
+                        .clone()
+                        .map(|c| (true, c.name().cloned()))
+                        .unwrap_or_default()
+                };
+
+                let mut open_column_settings = ctx.props().presentation.get_open_column_settings();
+                open_column_settings
+                    .locator
+                    .clone_from(&self.selected_column);
+
+                ctx.props()
+                    .presentation
+                    .set_open_column_settings(Some(open_column_settings));
+
+                if let Some(sender) = sender {
+                    sender.send(()).unwrap();
+                }
+
+                true
+            },
+            PerspectiveViewerMsg::SettingsPanelSizeUpdate(Some(x)) => {
+                self.settings_panel_width_override = Some(x);
+                false
+            },
+            PerspectiveViewerMsg::SettingsPanelSizeUpdate(None) => {
+                self.settings_panel_width_override = None;
+                false
+            },
+            PerspectiveViewerMsg::ColumnSettingsPanelSizeUpdate(Some(x)) => {
+                self.column_settings_panel_width_override = Some(x);
+                false
+            },
+            PerspectiveViewerMsg::ColumnSettingsPanelSizeUpdate(None) => {
+                self.column_settings_panel_width_override = None;
+                false
+            },
         }
     }
 
     /// This top-level component is mounted to the Custom Element, so it has no
     /// API to provide props - but for sanity if needed, just return true on
     /// change.
-    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, _ctx: &Context<Self>, _old: &Self::Properties) -> bool {
         true
     }
 
@@ -182,7 +408,7 @@ impl Component for PerspectiveViewer {
     /// async callbacks to the Custom Element API.
     fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
         ctx.props()
-            .renderer
+            .presentation
             .set_settings_open(Some(self.settings_open))
             .unwrap();
 
@@ -198,72 +424,174 @@ impl Component for PerspectiveViewer {
     }
 
     /// `PerspectiveViewer` has two basic UI modes - "open" and "closed".
-    // TODO these may be expensive to buil dbecause they will generate recursively
-    // from `JsPerspectiveConfig` - they may need caching as in the JavaScript
-    // version.
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let settings = ctx.link().callback(|_| Msg::ToggleSettingsInit(None, None));
-        html_template! {
-            <style>{ &CSS }</style>
+        let settings = ctx
+            .link()
+            .callback(|_| PerspectiveViewerMsg::ToggleSettingsInit(None, None));
 
-            if self.settings_open {
-                <SplitPanel
-                    id="app_panel"
-                    on_reset={ self.on_dimensions_reset.callback() }
-                    on_resize_finished={ ctx.props().render_callback() }>
-                    <div id="side_panel" class="column noselect">
-                        <PluginSelector
-                            session={ ctx.props().session.clone() }
-                            renderer={ ctx.props().renderer.clone() }>
-                        </PluginSelector>
-                        <ColumnSelector
-                            dragdrop={ ctx.props().dragdrop.clone() }
-                            renderer={ ctx.props().renderer.clone() }
-                            session={ ctx.props().session.clone() }
-                            on_resize={ self.on_resize.clone() }
-                            on_dimensions_reset={ self.on_dimensions_reset.clone() }>
-                        </ColumnSelector>
-                    </div>
-                    <div id="main_column">
-                        <ConfigSelector
-                            dragdrop={ ctx.props().dragdrop.clone() }
-                            session={ ctx.props().session.clone() }
-                            renderer={ ctx.props().renderer.clone() }>
-                        </ConfigSelector>
-                        <div id="main_panel_container">
-                            <RenderWarning
-                                dimensions={ self.dimensions }
-                                session={ ctx.props().session.clone() }
-                                renderer={ ctx.props().renderer.clone() }>
-                            </RenderWarning>
-                            <slot></slot>
-                        </div>
-                    </div>
-                </SplitPanel>
+        let on_close_settings = ctx
+            .link()
+            .callback(|()| PerspectiveViewerMsg::ToggleSettingsInit(None, None));
+
+        let on_toggle_debug = ctx.link().callback(|_| PerspectiveViewerMsg::ToggleDebug);
+        let mut class = classes!("settings-closed");
+        if ctx.props().is_title() {
+            class.push("titled");
+        }
+
+        let on_open_expr_panel =
+            ctx.link()
+                .callback(|c| PerspectiveViewerMsg::OpenColumnSettings {
+                    locator: Some(c),
+                    sender: None,
+                    toggle: true,
+                });
+
+        let on_reset = ctx
+            .link()
+            .callback(|all| PerspectiveViewerMsg::Reset(all, None));
+
+        let on_split_panel_resize = ctx
+            .link()
+            .callback(|(x, _)| PerspectiveViewerMsg::SettingsPanelSizeUpdate(Some(x)));
+
+        let on_column_settings_panel_resize = ctx
+            .link()
+            .callback(|(x, _)| PerspectiveViewerMsg::ColumnSettingsPanelSizeUpdate(Some(x)));
+
+        let settings_panel = html! {
+            <div id="settings_panel" class="sidebar_column noselect split-panel orient-vertical">
+                if self.selected_column.is_none() {
+                    <SidebarCloseButton
+                        id="settings_close_button"
+                        on_close_sidebar={&on_close_settings}
+                    />
+                }
+                <SidebarCloseButton
+                    id={if self.debug_open { "debug_close_button" } else { "debug_open_button" }}
+                    on_close_sidebar={&on_toggle_debug}
+                />
+                <PluginSelector
+                    session={&ctx.props().session}
+                    renderer={&ctx.props().renderer}
+                    presentation={&ctx.props().presentation}
+                />
+                <ColumnSelector
+                    dragdrop={&ctx.props().dragdrop}
+                    renderer={&ctx.props().renderer}
+                    session={&ctx.props().session}
+                    presentation={&ctx.props().presentation}
+                    on_resize={&self.on_resize}
+                    on_open_expr_panel={&on_open_expr_panel}
+                    on_dimensions_reset={&self.on_dimensions_reset}
+                    selected_column={self.selected_column.clone()}
+                />
+            </div>
+        };
+
+        let main_panel = html! {
+            <div id="main_column">
                 <StatusBar
                     id="status_bar"
-                    session={ ctx.props().session.clone() }
-                    renderer={ ctx.props().renderer.clone() }
-                    theme={ ctx.props().theme.clone() }
-                    on_reset={ ctx.link().callback(|all| Msg::Reset(all, None)) }>
-                </StatusBar>
-            } else {
-                <RenderWarning
-                    dimensions={ self.dimensions }
-                    session={ ctx.props().session.clone() }
-                    renderer={ ctx.props().renderer.clone() }>
-                </RenderWarning>
-                <div id="main_panel_container" class="settings-closed">
-                    <slot></slot>
+                    session={&ctx.props().session}
+                    renderer={&ctx.props().renderer}
+                    presentation={&ctx.props().presentation}
+                    on_reset={on_reset.clone()}
+                />
+                <div id="main_panel_container">
+                    <RenderWarning
+                        dimensions={self.dimensions}
+                        session={&ctx.props().session}
+                        renderer={&ctx.props().renderer}
+                    />
+                    <slot />
                 </div>
-            }
-
-            <div
-                id="settings_button"
-                class="noselect button"
-                onmousedown={ settings }>
+                if let Some(selected_column) = self.selected_column.clone() {
+                    <SplitPanel
+                        id="modal_panel"
+                        reverse=true
+                        initial_size={self.column_settings_panel_width_override}
+                        on_reset={ctx.link().callback(|_| PerspectiveViewerMsg::ColumnSettingsPanelSizeUpdate(None))}
+                        on_resize={on_column_settings_panel_resize}
+                    >
+                        <ColumnSettingsSidebar
+                            session={&ctx.props().session}
+                            renderer={&ctx.props().renderer}
+                            custom_events={&ctx.props().custom_events}
+                            presentation={&ctx.props().presentation}
+                            {selected_column}
+                            on_close={self.on_close_column_settings.clone()}
+                            width_override={self.column_settings_panel_width_override}
+                            is_active={self.selected_column_is_active}
+                        />
+                        <></>
+                    </SplitPanel>
+                }
             </div>
-            <FontLoader ..self.fonts.clone()></FontLoader>
+        };
+
+        html! {
+            <>
+                <StyleProvider>
+                    <LocalStyle href={css!("viewer")} />
+                    if self.settings_open && ctx.props().session.has_table() {
+                        if self.debug_open {
+                            <SplitPanel
+                                id="app_panel"
+                                reverse=true
+                                initial_size={self.settings_panel_width_override}
+                                on_reset={ctx.link().callback(|_| PerspectiveViewerMsg::SettingsPanelSizeUpdate(None))}
+                                on_resize={on_split_panel_resize}
+                                on_resize_finished={ctx.props().render_callback()}
+                            >
+                                <DebugPanel
+                                    session={ctx.props().session()}
+                                    renderer={ctx.props().renderer()}
+                                    presentation={ctx.props().presentation()}
+                                />
+                                { settings_panel }
+                                { main_panel }
+                            </SplitPanel>
+                        } else {
+                            <SplitPanel
+                                id="app_panel"
+                                reverse=true
+                                initial_size={self.settings_panel_width_override}
+                                on_reset={ctx.link().callback(|_| PerspectiveViewerMsg::SettingsPanelSizeUpdate(None))}
+                                on_resize={on_split_panel_resize}
+                                on_resize_finished={ctx.props().resize_callback()}
+                            >
+                                { settings_panel }
+                                { main_panel }
+                            </SplitPanel>
+                        }
+                    } else {
+                        <RenderWarning
+                            dimensions={self.dimensions}
+                            session={&ctx.props().session}
+                            renderer={&ctx.props().renderer}
+                        />
+                        if ctx.props().is_title() || !ctx.props().session.has_table() {
+                            <StatusBar
+                                id="status_bar"
+                                session={&ctx.props().session}
+                                renderer={&ctx.props().renderer}
+                                presentation={&ctx.props().presentation}
+                                {on_reset}
+                            />
+                        }
+                        <div id="main_panel_container" {class}><slot /></div>
+                        if !ctx.props().presentation.get_is_workspace() {
+                            <div
+                                id="settings_button"
+                                class={if ctx.props().is_title() { "noselect button closed titled" } else { "noselect button closed" }}
+                                onmousedown={settings}
+                            />
+                        }
+                    }
+                </StyleProvider>
+                <FontLoader ..self.fonts.clone() />
+            </>
         }
     }
 
@@ -288,40 +616,39 @@ impl PerspectiveViewer {
         &mut self,
         ctx: &Context<Self>,
         force: Option<bool>,
-        sender: Option<Sender<Result<JsValue, JsValue>>>,
+        sender: Option<Sender<ApiResult<JsValue>>>,
     ) {
-        let is_open = ctx.props().renderer.is_settings_open();
+        let is_open = ctx.props().presentation.is_settings_open();
         match force {
             Some(force) if is_open == force => {
                 if let Some(sender) = sender {
                     sender.send(Ok(JsValue::UNDEFINED)).unwrap();
                 }
-            }
+            },
             Some(_) | None => {
                 let force = !is_open;
                 let callback = ctx.link().callback(move |resolve| {
                     let update = SettingsUpdate::Update(force);
-                    Msg::ToggleSettingsComplete(update, resolve)
+                    PerspectiveViewerMsg::ToggleSettingsComplete(update, resolve)
                 });
 
                 clone!(ctx.props().renderer, ctx.props().session);
                 ApiFuture::spawn(async move {
                     let result = if session.js_get_table().is_some() {
-                        renderer.presize(force, callback.emit_and_render()).await
+                        renderer.presize(force, callback.emit_async_safe()).await
                     } else {
-                        callback.emit_and_render().await?;
+                        callback.emit_async_safe().await?;
                         Ok(JsValue::UNDEFINED)
                     };
 
                     if let Some(sender) = sender {
-                        // TODO shouldn't ignore, this should retry (?)
-                        let msg = result.clone().or_else(ignore_view_delete);
-                        sender.send(msg).into_jserror()?;
+                        let msg = result.clone().ignore_view_delete();
+                        sender.send(msg).into_apierror()?;
                     };
 
                     result
                 });
-            }
+            },
         };
     }
 }

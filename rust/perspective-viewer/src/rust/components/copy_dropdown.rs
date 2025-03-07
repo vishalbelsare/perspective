@@ -1,21 +1,25 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+use std::rc::Rc;
+
+use yew::prelude::*;
 
 use super::containers::dropdown_menu::*;
 use super::modal::*;
+use super::style::StyleProvider;
 use crate::model::*;
 use crate::renderer::*;
 use crate::utils::*;
-use crate::*;
-
-use js_intern::*;
-use std::rc::Rc;
-use yew::prelude::*;
 
 pub type CopyDropDownMenuMsg = DropDownMenuMsg;
 pub type CopyDropDownMenuItem = DropDownMenuItem<ExportMethod>;
@@ -45,12 +49,15 @@ impl Component for CopyDropDownMenu {
 
     fn view(&self, ctx: &Context<Self>) -> yew::virtual_dom::VNode {
         let plugin = ctx.props().renderer.get_active_plugin().unwrap();
-        let has_render = js_sys::Reflect::has(&plugin, js_intern!("render")).unwrap();
-        html_template! {
-            <DropDownMenu<ExportMethod>
-                values={ Rc::new(get_menu_items(has_render)) }
-                callback={ ctx.props().callback.clone() }>
-            </DropDownMenu<ExportMethod>>
+        let has_render = js_sys::Reflect::has(&plugin, js_intern::js_intern!("render")).unwrap();
+        let has_selection = ctx.props().renderer.get_selection().is_some();
+        html! {
+            <StyleProvider>
+                <DropDownMenu<ExportMethod>
+                    values={Rc::new(get_menu_items(has_render, has_selection))}
+                    callback={&ctx.props().callback}
+                />
+            </StyleProvider>
         }
     }
 
@@ -66,21 +73,43 @@ impl Component for CopyDropDownMenu {
             .plugin_changed
             .add_listener(ctx.link().callback(|_| ()));
 
-        CopyDropDownMenu { _sub }
+        Self { _sub }
     }
 }
 
-fn get_menu_items(has_render: bool) -> Vec<CopyDropDownMenuItem> {
-    vec![
+fn get_menu_items(has_render: bool, has_selection: bool) -> Vec<CopyDropDownMenuItem> {
+    let mut items = vec![
         CopyDropDownMenuItem::OptGroup(
-            "Current View",
+            "Current View".into(),
             if has_render {
-                vec![ExportMethod::Csv, ExportMethod::Json, ExportMethod::Png]
+                vec![
+                    ExportMethod::Csv,
+                    ExportMethod::Json,
+                    ExportMethod::Ndjson,
+                    ExportMethod::Png,
+                ]
             } else {
-                vec![ExportMethod::Csv, ExportMethod::Json]
+                vec![ExportMethod::Csv, ExportMethod::Json, ExportMethod::Ndjson]
             },
         ),
-        CopyDropDownMenuItem::OptGroup("All", vec![ExportMethod::CsvAll, ExportMethod::JsonAll]),
-        CopyDropDownMenuItem::OptGroup("Config", vec![ExportMethod::JsonConfig]),
-    ]
+        CopyDropDownMenuItem::OptGroup("All".into(), vec![
+            ExportMethod::CsvAll,
+            ExportMethod::JsonAll,
+            ExportMethod::NdjsonAll,
+        ]),
+        CopyDropDownMenuItem::OptGroup("Config".into(), vec![ExportMethod::JsonConfig]),
+    ];
+
+    if has_selection {
+        items.insert(
+            0,
+            CopyDropDownMenuItem::OptGroup("Current Selection".into(), vec![
+                ExportMethod::CsvSelected,
+                ExportMethod::JsonSelected,
+                ExportMethod::NdjsonSelected,
+            ]),
+        )
+    }
+
+    items
 }

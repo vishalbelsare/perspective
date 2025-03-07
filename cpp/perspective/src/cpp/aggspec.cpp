@@ -1,73 +1,95 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #include <perspective/first.h>
 #include <perspective/aggspec.h>
 #include <perspective/base.h>
 #include <sstream>
+#include <utility>
 
 namespace perspective {
 
-t_col_name_type::t_col_name_type()
-    : m_type(DTYPE_NONE) {}
+t_col_name_type::t_col_name_type() : m_type(DTYPE_NONE) {}
 
-t_col_name_type::t_col_name_type(const std::string& name, t_dtype type)
-    : m_name(name)
-    , m_type(type) {}
+t_col_name_type::t_col_name_type(std::string name, t_dtype type) :
+    m_name(std::move(name)),
+    m_type(type) {}
 
-t_aggspec::t_aggspec() {}
-
-t_aggspec::t_aggspec(const std::string& name, t_aggtype agg,
-    const std::vector<t_dep>& dependencies)
-    : m_name(name)
-    , m_disp_name(name)
-    , m_agg(agg)
-    , m_dependencies(dependencies) {}
+t_aggspec::t_aggspec() = default;
 
 t_aggspec::t_aggspec(
-    const std::string& aggname, t_aggtype agg, const std::string& dep)
-    : m_name(aggname)
-    , m_disp_name(aggname)
-    , m_agg(agg)
-    , m_dependencies(std::vector<t_dep>{t_dep(dep, DEPTYPE_COLUMN)}) {}
+    const std::string& name,
+    t_aggtype agg,
+    const std::vector<t_dep>& dependencies
+) :
+    m_name(name),
+    m_disp_name(name),
+    m_agg(agg),
+    m_dependencies(dependencies) {}
 
-t_aggspec::t_aggspec(t_aggtype agg, const std::string& dep)
-    : m_agg(agg)
-    , m_dependencies(std::vector<t_dep>{t_dep(dep, DEPTYPE_COLUMN)}) {}
+t_aggspec::t_aggspec(
+    const std::string& aggname, t_aggtype agg, const std::string& dep
+) :
+    m_name(aggname),
+    m_disp_name(aggname),
+    m_agg(agg),
+    m_dependencies(std::vector<t_dep>{t_dep(dep, DEPTYPE_COLUMN)}) {}
 
-t_aggspec::t_aggspec(const std::string& name, const std::string& disp_name,
-    t_aggtype agg, const std::vector<t_dep>& dependencies)
-    : m_name(name)
-    , m_disp_name(disp_name)
-    , m_agg(agg)
-    , m_dependencies(dependencies) {}
+t_aggspec::t_aggspec(t_aggtype agg, const std::string& dep) :
+    m_agg(agg),
+    m_dependencies(std::vector<t_dep>{t_dep(dep, DEPTYPE_COLUMN)}) {}
 
-t_aggspec::t_aggspec(const std::string& name, const std::string& disp_name,
-    t_aggtype agg, const std::vector<t_dep>& dependencies, t_sorttype sort_type)
-    : m_name(name)
-    , m_disp_name(disp_name)
-    , m_agg(agg)
-    , m_dependencies(dependencies)
-    , m_sort_type(sort_type) {}
+t_aggspec::t_aggspec(
+    std::string name,
+    std::string disp_name,
+    t_aggtype agg,
+    const std::vector<t_dep>& dependencies
+) :
+    m_name(std::move(name)),
+    m_disp_name(std::move(disp_name)),
+    m_agg(agg),
+    m_dependencies(dependencies) {}
 
-t_aggspec::t_aggspec(const std::string& aggname,
-    const std::string& disp_aggname, t_aggtype agg, t_uindex agg_one_idx,
-    t_uindex agg_two_idx, double agg_one_weight, double agg_two_weight)
-    : m_name(aggname)
-    , m_disp_name(disp_aggname)
-    , m_agg(agg)
-    , m_agg_one_idx(agg_one_idx)
-    , m_agg_two_idx(agg_two_idx)
-    , m_agg_one_weight(agg_one_weight)
-    , m_agg_two_weight(agg_two_weight) {}
+t_aggspec::t_aggspec(
+    std::string name,
+    std::string disp_name,
+    t_aggtype agg,
+    const std::vector<t_dep>& dependencies,
+    t_sorttype sort_type
+) :
+    m_name(std::move(name)),
+    m_disp_name(std::move(disp_name)),
+    m_agg(agg),
+    m_dependencies(dependencies),
+    m_sort_type(sort_type) {}
 
-t_aggspec::~t_aggspec() {}
+t_aggspec::t_aggspec(
+    std::string aggname,
+    std::string disp_aggname,
+    t_aggtype agg,
+    t_uindex agg_one_idx,
+    t_uindex agg_two_idx,
+    double agg_one_weight,
+    double agg_two_weight
+) :
+    m_name(std::move(aggname)),
+    m_disp_name(std::move(disp_aggname)),
+    m_agg(agg),
+    m_agg_one_idx(agg_one_idx),
+    m_agg_two_idx(agg_two_idx),
+    m_agg_one_weight(agg_one_weight),
+    m_agg_two_weight(agg_two_weight) {}
+
+t_aggspec::~t_aggspec() = default;
 
 std::string
 t_aggspec::name() const {
@@ -121,6 +143,12 @@ t_aggspec::agg_str() const {
         case AGGTYPE_ANY: {
             return "any";
         } break;
+        case AGGTYPE_Q1: {
+            return "q1";
+        } break;
+        case AGGTYPE_Q3: {
+            return "q3";
+        } break;
         case AGGTYPE_MEDIAN: {
             return "median";
         } break;
@@ -159,6 +187,12 @@ t_aggspec::agg_str() const {
         } break;
         case AGGTYPE_LAST_VALUE: {
             return "last_value";
+        }
+        case AGGTYPE_MAX: {
+            return "max";
+        }
+        case AGGTYPE_MIN: {
+            return "min";
         }
         case AGGTYPE_HIGH_WATER_MARK: {
             return "high_water_mark";
@@ -309,17 +343,22 @@ t_aggspec::get_output_specs(const t_schema& schema) const {
         case AGGTYPE_SUM_NOT_NULL: {
             t_dtype coltype = schema.get_dtype(m_dependencies[0].name());
             return mk_col_name_type_vec(
-                name(), get_simple_accumulator_type(coltype));
+                name(), get_simple_accumulator_type(coltype)
+            );
         }
         case AGGTYPE_ANY:
         case AGGTYPE_UNIQUE:
         case AGGTYPE_DOMINANT:
+        case AGGTYPE_Q1:
+        case AGGTYPE_Q3:
         case AGGTYPE_MEDIAN:
         case AGGTYPE_FIRST:
         case AGGTYPE_LAST_BY_INDEX:
         case AGGTYPE_LAST_MINUS_FIRST:
         case AGGTYPE_OR:
         case AGGTYPE_LAST_VALUE:
+        case AGGTYPE_MAX:
+        case AGGTYPE_MIN:
         case AGGTYPE_HIGH_WATER_MARK:
         case AGGTYPE_LOW_WATER_MARK:
         case AGGTYPE_HIGH_MINUS_LOW:
@@ -370,7 +409,7 @@ t_aggspec::get_output_specs(const t_schema& schema) const {
         }
     }
 
-    return std::vector<t_col_name_type>();
+    return {};
 }
 
 std::vector<t_col_name_type>
@@ -407,8 +446,9 @@ t_aggspec::is_non_delta() const {
 
 std::string
 t_aggspec::get_first_depname() const {
-    if (m_dependencies.empty())
+    if (m_dependencies.empty()) {
         return "";
+    }
 
     return m_dependencies[0].name();
 }

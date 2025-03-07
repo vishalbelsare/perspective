@@ -1,17 +1,26 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-@import "../../../../rust/perspective-viewer/src/less/variables.less";
 @import "./gradient_colors.less";
 @import "./series_colors.less";
 
-@sans-serif-fonts: Arial, sans-serif;
+@mixin icon {
+    background-repeat: no-repeat;
+    background-color: var(--icon--color);
+    content: "";
+    display: inline-block;
+    -webkit-mask-size: cover;
+    mask-size: cover;
+}
 
 :host {
     user-select: none;
@@ -22,7 +31,7 @@
         top: 0;
         width: 100%;
         height: 100%;
-        padding: 15px;
+        padding: 12px;
         overflow: hidden;
 
         &.heatmap,
@@ -46,11 +55,73 @@
         &.heatmap {
             padding-right: 120px;
         }
-
-        &.sunburst {
+        &.xyscatter {
             padding: 0;
             font-size: 14px;
 
+            d3fc-group:first-child {
+                padding: 16px;
+                padding-top: 0px;
+                width: calc(100% - 32px);
+                height: calc(100% - 16px);
+            }
+
+            & .multi-xlabel {
+                position: absolute;
+                bottom: 0;
+                height: 2.5em;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: var(--d3fc-legend--background);
+            }
+            & .multi-ylabel {
+                position: absolute;
+                top: 0;
+                width: 2.5em;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: var(--d3fc-legend--background);
+            }
+
+            & .outer-container {
+                height: 100%;
+            }
+
+            & .inner-container {
+                display: inline-grid;
+                overflow-y: auto;
+                width: calc(100% - 16px);
+                height: 100%;
+                padding: 0;
+                margin: 0;
+
+                & div {
+                    overflow: hidden;
+                }
+
+                & text.segment,
+                & text.parent {
+                    text-anchor: middle;
+                    user-select: none;
+                    pointer-events: none;
+                    fill: var(--d3fc-treedata--labels, rgb(51, 51, 51));
+                }
+
+                & div.xy-scatter-container {
+                    margin: 5px 0;
+                }
+            }
+        }
+        &.sunburst {
+            padding: 0;
+            font-size: 14px;
+            & .outer-container {
+                height: 100%;
+            }
             & .inner-container {
                 width: 100%;
                 height: 100%;
@@ -103,6 +174,10 @@
                     width: calc(100% - 12px);
                     height: calc(100% - 12px);
                 }
+            }
+
+            & .outer-container {
+                height: 100%;
             }
 
             & .inner-container {
@@ -184,7 +259,7 @@
 
                 & .parent-controls {
                     position: absolute;
-                    top: 15px;
+                    top: 12px;
                     right: auto;
                     left: 30px;
                     width: auto;
@@ -257,19 +332,19 @@
         }
 
         & .y-label.left-label .splitter-label::after {
-            font-family: var(
-                --d3fc-y1-label--font-family,
-                var(--button--font-family, inherit)
-            );
-            content: var(--d3fc-y1-label--content, "\1f847");
+            @include icon;
+            width: 16px;
+            height: 12px;
+            -webkit-mask-image: var(--sort-desc-icon--mask-image);
+            mask-image: var(--sort-desc-icon--mask-image);
         }
 
         & .y-label.right-label .splitter-label::after {
-            font-family: var(
-                --d3fc-y2-label--font-family,
-                var(--button--font-family, inherit)
-            );
-            content: var(--d3fc-y2-label--content, "\1f845");
+            @include icon;
+            width: 16px;
+            height: 12px;
+            -webkit-mask-image: var(--sort-asc-icon--mask-image);
+            mask-image: var(--sort-asc-icon--mask-image);
         }
 
         &.ybar .y-axis path,
@@ -293,10 +368,6 @@
         }
     }
 
-    .disabled {
-        filter: grayscale(100%);
-    }
-
     #dragHandles {
         position: absolute;
         top: 0px;
@@ -314,8 +385,8 @@
 
     .legend-container {
         position: absolute;
-        top: 15px;
-        right: 15px;
+        top: 12px;
+        right: 12px;
         left: auto;
         width: 150px;
         height: 280px;
@@ -329,7 +400,6 @@
             transition: box-shadow 1s;
             &:hover {
                 background-color: var(--d3fc-legend--background, #ffffff);
-                box-shadow: @elevation1;
                 transition: box-shadow 0.2s, background-color 0.2s;
             }
         }

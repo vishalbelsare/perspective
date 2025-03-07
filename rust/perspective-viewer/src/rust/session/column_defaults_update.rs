@@ -1,25 +1,32 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use super::metadata::*;
-use crate::config::*;
-use crate::js::plugin::*;
-
-use itertools::Itertools;
 use std::iter::IntoIterator;
 
-impl ViewConfigUpdate {
+use itertools::Itertools;
+use perspective_client::ColumnType;
+use perspective_client::config::*;
+
+use super::metadata::*;
+use crate::js::plugin::*;
+
+#[extend::ext]
+pub impl ViewConfigUpdate {
     /// Appends additional columns to the `columns` field of this
     /// `ViewConfigUpdate` by picking appropriate new columns from the
     /// `SessionMetadata`, give the necessary column requirements of the plugin
     /// provided by a `ViewConfigRequirements`.  For example, an "X/Y Scatter"
     /// chart needs a minimum of 2 numeric columns to be drawable.
-    pub fn set_update_column_defaults(
+    fn set_update_column_defaults(
         &mut self,
         metadata: &SessionMetadata,
         columns: &[Option<String>],
@@ -41,7 +48,7 @@ impl ViewConfigUpdate {
                 .filter(|x| {
                     matches!(
                         metadata.get_column_table_type(x),
-                        Some(Type::Float | Type::Integer)
+                        Some(ColumnType::Float | ColumnType::Integer)
                     )
                 })
                 .take(*min_cols)
@@ -69,12 +76,12 @@ impl ViewConfigUpdate {
                             .filter(|x| {
                                 !numeric_config_columns
                                     .iter()
-                                    .any(|y| y.as_ref().map_or(false, |z| z == *x))
+                                    .any(|y| y.as_ref() == Some(*x))
                             })
                             .filter(|x| {
                                 matches!(
                                     metadata.get_column_table_type(x),
-                                    Some(Type::Float | Type::Integer)
+                                    Some(ColumnType::Float | ColumnType::Integer)
                                 )
                             })
                             .cloned()

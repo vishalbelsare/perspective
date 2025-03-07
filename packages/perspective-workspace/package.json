@@ -1,37 +1,26 @@
 {
     "name": "@finos/perspective-workspace",
-    "version": "1.4.0",
+    "version": "3.4.0",
     "description": "Perspective Workspace",
     "files": [
         "dist/**/*",
         "src/**/*",
         "index.d.ts"
     ],
+    "type": "module",
     "exports": {
-        ".": {
-            "import": "./dist/umd/perspective-workspace.js",
-            "require": "./dist/umd/perspective-workspace.js"
-        },
+        ".": "./dist/esm/perspective-workspace.js",
         "./esm/": "./dist/esm/",
-        "./src/": "./src/",
-        "./dist/": "./dist/",
+        "./src/*": "./src/*",
+        "./dist/*": "./dist/*",
         "./dist/themes/": "./src/themes/",
         "./package.json": "./package.json"
     },
-    "unpkg": "./dist/umd/perspective-workspace.js",
-    "jsdelivr": "./dist/umd/perspective-workspace.js",
-    "main": "./dist/umd/perspective-workspace.js",
+    "unpkg": "./dist/cdn/perspective-workspace.js",
+    "jsdelivr": "./dist/cdn/perspective-workspace.js",
     "scripts": {
-        "bench": "npm-run-all bench:build bench:run",
-        "bench:build": "echo \"No Benchmarks\"",
-        "bench:run": "echo \"No Benchmarks\"",
         "build": "node ./build.js",
-        "clean": "rimraf dist",
-        "clean:screenshots": "rimraf \"test/screenshots/**/*.@(failed|diff).png\"",
-        "test:run": "jest --rootDir=. --config=../../tools/perspective-test/jest.config.js  --color",
-        "test:unit": "jest  --color --config=./config/jest.unit.config.js 2>&1",
-        "test:integration": "jest --color  --config=./config/jest.integration.config.js 2>&1",
-        "watch": "PSP_DEBUG=1 webpack --color --watch --config config/watch.config.js"
+        "clean": "rimraf dist"
     },
     "publishConfig": {
         "access": "public"
@@ -43,14 +32,23 @@
     "author": "",
     "license": "Apache-2.0",
     "dependencies": {
-        "@finos/perspective-viewer": "^1.4.0",
-        "@lumino/algorithm": "1.9.1",
-        "@lumino/commands": "1.20.0",
-        "@lumino/widgets": "1.31.1",
-        "lodash": "^4.17.4"
+        "@finos/perspective": "workspace:^",
+        "@finos/perspective-viewer": "workspace:^",
+        "@lumino/algorithm": ">=2 <3",
+        "@lumino/commands": ">=2 <3",
+        "@lumino/domutils": ">=2 <3",
+        "@lumino/messaging": ">=2 <3",
+        "@lumino/virtualdom": ">=2 <3",
+        "@lumino/widgets": ">=2 <3",
+        "@lumino/coreutils": ">=2 <3",
+        "@lumino/signaling": ">=2 <3",
+        "lodash": "^4.17.21"
     },
     "devDependencies": {
-        "@finos/perspective-build": "^1.4.0",
-        "@finos/perspective-test": "^1.4.0"
+        "@prospective.co/procss": "^0.1.16",
+        "@finos/perspective-esbuild-plugin": "workspace:^",
+        "@finos/perspective-test": "workspace:^",
+        "@types/lodash": "^4.17.12",
+        "zx": "^8.1.9"
     }
 }

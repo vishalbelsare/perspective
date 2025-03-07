@@ -1,11 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2019, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #pragma once
 
@@ -17,6 +20,7 @@
 #include <perspective/data_table.h>
 #include <perspective/rlookup.h>
 #include <perspective/computed_function.h>
+#include <perspective/gnode_state.h>
 #include <date/date.h>
 #include <tsl/hopscotch_set.h>
 
@@ -44,15 +48,21 @@ class PERSPECTIVE_EXPORT t_computed_expression {
 public:
     PSP_NON_COPYABLE(t_computed_expression);
 
-    t_computed_expression(const std::string& expression_alias,
-        const std::string& expression_string,
-        const std::string& parsed_expression_string,
+    t_computed_expression(
+        std::string expression_alias,
+        std::string expression_string,
+        std::string parsed_expression_string,
         const std::vector<std::pair<std::string, std::string>>& column_ids,
-        t_dtype dtype);
+        t_dtype dtype
+    );
 
-    void compute(std::shared_ptr<t_data_table> source_table,
-        std::shared_ptr<t_data_table> destination_table,
-        t_expression_vocab& vocab, t_regex_mapping& regex_mapping) const;
+    void compute(
+        const std::shared_ptr<t_data_table>& source_table,
+        const t_gstate::t_mapping& pkey_map,
+        const std::shared_ptr<t_data_table>& destination_table,
+        t_expression_vocab& vocab,
+        t_regex_mapping& regex_mapping
+    ) const;
 
     const std::string& get_expression_alias() const;
     const std::string& get_expression_string() const;
@@ -95,8 +105,12 @@ public:
         const std::string& expression_string,
         const std::string& parsed_expression_string,
         const std::vector<std::pair<std::string, std::string>>& column_ids,
-        std::shared_ptr<t_schema> schema, t_expression_vocab& vocab,
-        t_regex_mapping& regex_mapping);
+        const std::shared_ptr<t_data_table>& source_table,
+        const t_gstate::t_mapping& pkey_map,
+        const std::shared_ptr<t_schema>& schema,
+        t_expression_vocab& vocab,
+        t_regex_mapping& regex_mapping
+    );
 
     /**
      * @brief Returns the dtype of the given expression, or `DTYPE_NONE`
@@ -118,12 +132,18 @@ public:
      * @param error_string
      * @return t_dtype
      */
-    static t_dtype get_dtype(const std::string& expression_alias,
+    static t_dtype get_dtype(
+        const std::string& expression_alias,
         const std::string& expression_string,
         const std::string& parsed_expression_string,
         const std::vector<std::pair<std::string, std::string>>& column_ids,
-        const t_schema& schema, t_expression_error& error,
-        t_expression_vocab& vocab, t_regex_mapping& regex_mapping);
+        const std::shared_ptr<t_data_table>& source_table,
+        const t_gstate::t_mapping& pkey_map,
+        const t_schema& schema,
+        t_expression_error& error,
+        t_expression_vocab& vocab,
+        t_regex_mapping& regex_mapping
+    );
 
     static std::shared_ptr<exprtk::parser<t_tscalar>> PARSER;
 
@@ -137,6 +157,10 @@ public:
     static computed_function::inrange_fn INRANGE_FN;
     static computed_function::min_fn MIN_FN;
     static computed_function::max_fn MAX_FN;
+    static computed_function::diff3 diff3;
+    static computed_function::norm3 norm3;
+    static computed_function::cross_product3 cross_product3;
+    static computed_function::dot_product3 dot_product3;
     static computed_function::length LENGTH_FN;
     static computed_function::is_null IS_NULL_FN;
     static computed_function::is_not_null IS_NOT_NULL_FN;
@@ -160,9 +184,10 @@ struct PERSPECTIVE_EXPORT t_validated_expression_map {
     t_validated_expression_map();
 
     void add_expression(
-        const std::string& expression_alias, const std::string& type_string);
-    void add_error(
-        const std::string& expression_alias, t_expression_error& error);
+        const std::string& expression_alias, const std::string& type_string
+    );
+    void
+    add_error(const std::string& expression_alias, t_expression_error& error);
 
     std::map<std::string, std::string> get_expression_schema() const;
     std::map<std::string, t_expression_error> get_expression_errors() const;
@@ -180,11 +205,17 @@ struct PERSPECTIVE_EXPORT t_validated_expression_map {
 struct PERSPECTIVE_EXPORT t_computed_function_store {
     PSP_NON_COPYABLE(t_computed_function_store);
 
-    t_computed_function_store(t_expression_vocab& vocab,
-        t_regex_mapping& regex_mapping, bool is_type_validator);
+    t_computed_function_store(
+        t_expression_vocab& vocab,
+        t_regex_mapping& regex_mapping,
+        bool is_type_validator,
+        const std::shared_ptr<t_data_table>& source_table,
+        const t_gstate::t_mapping& pkey_map,
+        t_uindex& row_idx
+    );
 
-    void register_computed_functions(
-        exprtk::symbol_table<t_tscalar>& sym_table);
+    void register_computed_functions(exprtk::symbol_table<t_tscalar>& sym_table
+    );
 
     /**
      * @brief Clear any intermediate state that may be used by functions, such
@@ -209,6 +240,9 @@ struct PERSPECTIVE_EXPORT t_computed_function_store {
     computed_function::substring m_substring_fn;
     computed_function::replace m_replace_fn;
     computed_function::replace_all m_replace_all_fn;
+    computed_function::index m_index_fn;
+    computed_function::col m_col_fn;
+    computed_function::vlookup m_vlookup_fn;
 };
 
 } // end namespace perspective

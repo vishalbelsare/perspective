@@ -1,18 +1,18 @@
 {
     "name": "@finos/perspective-cli",
-    "version": "1.4.0",
+    "version": "3.4.0",
     "description": "Perspective.js CLI",
     "main": "src/js/index.js",
     "publishConfig": {
         "access": "public"
     },
+    "type": "module",
     "files": [
         "src/**/*",
         "perspective"
     ],
-    "typings": "index.d.ts",
+    "types": "index.d.ts",
     "scripts": {
-        "build": ":",
         "clean": "rimraf build"
     },
     "repository": {
@@ -25,11 +25,16 @@
         "perspective": "perspective"
     },
     "dependencies": {
-        "@finos/perspective": "^1.4.0",
-        "@finos/perspective-viewer": "^1.4.0",
-        "@finos/perspective-viewer-d3fc": "^1.4.0",
-        "@finos/perspective-viewer-datagrid": "^1.4.0",
+        "@finos/perspective": "workspace:^",
+        "@finos/perspective-viewer": "workspace:^",
+        "@finos/perspective-viewer-d3fc": "workspace:^",
+        "@finos/perspective-viewer-datagrid": "workspace:^",
+        "@finos/perspective-viewer-openlayers": "workspace:^",
+        "@finos/perspective-workspace": "workspace:^",
         "commander": "^2.19.0",
-        "puppeteer": "^13.1.3"
+        "puppeteer": "^23"
+    },
+    "devDependencies": {
+        "@finos/perspective-test": "workspace:^"
     }
 }

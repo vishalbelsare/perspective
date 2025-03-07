@@ -1,32 +1,19 @@
-<!--
-   
-   Copyright (c) 2017, the Perspective Authors.
-   
-   This file is part of the Perspective library, distributed under the terms of
-   the Apache License 2.0.  The full license can be found in the LICENSE file.
-
--->
-
 <!DOCTYPE html>
 <html>
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
-
-        <script type="module" src="/node_modules/@finos/perspective/dist/cdn/perspective.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer/dist/cdn/perspective-viewer.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js"></script>
-        <script type="module" src="/node_modules/@finos/perspective-viewer-d3fc/dist/cdn/perspective-viewer-d3fc.js"></script>
-
+        <link rel="preload" href="/node_modules/@finos/perspective/dist/wasm/perspective-server.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" />
+        <link rel="preload" href="/node_modules/@finos/perspective-viewer/dist/wasm/perspective-viewer.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" />
         <link rel="stylesheet" crossorigin="anonymous" href="/node_modules/@finos/perspective-viewer/dist/css/themes.css" />
-
         <script type="module">
-            import {worker} from "/node_modules/@finos/perspective/dist/cdn/perspective.js";
+            import "/node_modules/@finos/perspective-viewer/dist/cdn/perspective-viewer.js";
+            import "/node_modules/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js";
+            import "/node_modules/@finos/perspective-viewer-d3fc/dist/cdn/perspective-viewer-d3fc.js";
 
-            const WORKER = worker();
-            const REQ = fetch(
-                "https://api.covidtracking.com/v1/states/daily.csv"
-            );
+            import { worker } from "/node_modules/@finos/perspective/dist/cdn/perspective.js";
 
+            const WORKER = await worker();
+            const REQ = fetch("https://api.covidtracking.com/v1/states/daily.csv");
             const LAYOUT = {
                 plugin: "Y Area",
                 plugin_config: {
@@ -43,30 +30,22 @@
                 columns: ["deathIncrease"],
                 filter: [],
                 sort: [["deathIncrease", "col desc"]],
-                expressions: [
-                    `// Parsed "date" bucket by week
-var year := integer(floor("date" / 10000));
+                expressions: {
+                    [`Parsed "date" bucket by week`]: `var year := integer(floor("date" / 10000));
 var month := integer(floor("date" / 100)) - year * 100;
 var day := integer("date" % 100);
 bucket(date(year, month, day), \'W\')`,
-                ],
+                },
                 aggregates: {},
             };
 
-            async function load() {
-                const resp = await REQ;
-                const csv = await resp.text();
-                const el =
-                    document.getElementsByTagName("perspective-viewer")[0];
-                const table = WORKER.table(csv);
-                el.load(table);
-                el.restore(LAYOUT);
-                el.toggleConfig();
-            }
-
-            window.addEventListener("DOMContentLoaded", load);
+            const resp = await REQ;
+            const csv = await resp.text();
+            const el = document.getElementsByTagName("perspective-viewer")[0];
+            const table = WORKER.table(csv);
+            el.load(table);
+            el.restore(LAYOUT);
         </script>
-
         <style>
             perspective-viewer {
                 position: absolute;
@@ -77,7 +56,6 @@ bucket(date(year, month, day), \'W\')`,
             }
         </style>
     </head>
-
     <body>
         <perspective-viewer editable> </perspective-viewer>
     </body>

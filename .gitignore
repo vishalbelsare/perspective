@@ -1,198 +1,62 @@
 # -*- mode: gitignore; -*-
+__pycache__/
+!.vscode/extensions.json
+!.vscode/perspective.code-snippets
+!.vscode/settings.default.json
+!.vscode/tasks.json
+!website/i18n/en.json
+.cache
+.clangd
+.DS_Store
+.emsdk
+.ipynb_checkpoints
+.perspectiverc
+.vscode/*
+*.so
 *~
-\#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
-*.elc
-auto-save-list
-tramp
-.\#*
-
-# npm lock file
-package-lock.json
-
-# Intellij/WebStorm IDE
-*.iml
 /.idea
-
-# Visual Studio Code configuration
-*.code-workspace
-.history
-/jsconfig.json
-.vscode
-
-# Org-mode
-.org-id-locations
-*_archive
-
-# flymake-mode
-*_flymake.*
-
-# eshell files
+/auto/
+/docs/build
+/elpa/
 /eshell/history
 /eshell/lastdir
-
-# elpa packages
-/elpa/
-
-# reftex files
-*.rel
-
-# AUCTeX auto folder
-/auto/
-
-# cask packages
-.cask/
-dist/
-
-# Flycheck
-flycheck_*.el
-
-# server auth directory
-/server/
-
-# projectiles files
-.projectile
-
-# directory configuration
-.dir-locals.el
-
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.pyd
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-build
-CMakeCache.txt
-CMakeFiles
-cmake_install.cmake
-compile_commands.json
-node_modules
-*.mem
-ftpsync.settings
-*.log
-screenshots/
-Gemfile
-Gemfile.lock
-Vagrantfile
+/examples/*/build
+/jsconfig.json
+/packages/*/build
 /packages/sigma
-/packages/fin-hypergrid
-coverage
-
-.DS_Store
-
-website/translated_docs
-website/build/
-website/yarn.lock
-website/node_modules
-website/i18n/*
-!website/i18n/en.json
-.vscode
-
-.idea
-cmake-build-debug
-.ipynb_checkpoints
-.python-version
-.pytest_cache
-
-package.json.lerna_backup
-website/static/css/material-dark.css
-
-# CPP Compile
+/server/
 /src/include/boost
-obj
-packages/*/cjs
-cppbuild
-docsbuild
-.coverage
-
-# docs generated
-docs/_build
+benchmark_venv
+dist/
+docs/.docusaurus
+docs/i18n/en.json
 docs/modules.rst
 docs/perspective.*.rst
-docs/python
-package.json.bak
-yarn.lock.bak
-docs/static/img/**/*
-!docs/static/img/logo/
-!docs/static/img/logo/**
-
-
 docs/static/arrow/
-.perspectiverc
-
-# Python
-*.pyc
-__pycache__/
-
-# Copied C++ source folders
-python/perspective/cmake
-python/perspective/src
-python/perspective/test
+docs/static/blocks
+docs/static/features
+docs/static/guide
+examples/blocks/src/nypd/nypdccrb.arrow
+node_modules
+packages/perspective-jupyterlab/test/config/jupyter/migrated
+py_modules
 python/cmake
 python/cpp
-python/perspective/perspective_python.egg-info
-python/perspective/perspective/tests/table/psp_test
-python/perspective/perspective/node/assets/*
-/__pycache__
-docs/static/js/logo.js
-docs/static/js/logo.js.map
-python/perspective/pip-wheel-metadata
-junit.xml
-python/perspective/python_junit.xml
-python/perspective/coverage.xml
-python/perspective/bench/stresstest/results
-rust/perspective-viewer/target
-rust/perspective-viewer/pkg
-rust/perspective-viewer/target2
-rust/perspective-viewer/pkg
-
-rust/perspective-viewer/target
-rust/perspective-viewer/target2
-
-.emsdk
+rust/perspective-client/docs/expression_gen.md
+rust/perspective-client/src/rust/proto.rs
+rust/perspective-js/src/ts/ts-rs
+rust/perspective-python/LICENSE_THIRDPARTY_cargo.yml
+rust/perspective-python/LICENSE.md
+rust/perspective-server/cmake
+rust/perspective-server/cpp
+rust/perspective-server/docs/lib_gen.md
+rust/perspective-viewer/src/ts/ts-rs
+rust/perspective/src/ts/ts-rs
+rust/target*
+Vagrantfile
 vcpkg
-
-docs/static/css/material-dark.css
-docs/i18n/en.json
-docs/static/js
-
-rust/perspective-viewer/target.vscode
-target.vscode
-
-# jupyterlab test artifacts
-packages/perspective-jupyterlab/test/config/jupyter/lab
-packages/perspective-jupyterlab/test/config/jupyter/migrated
-docs/static/features
-results.debug.json
-
-tools/perspective-build/lib
+venv/
+rust/perspective-python/perspective_python-*.data
+.pytest-cache/

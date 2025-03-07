@@ -1,22 +1,30 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (c) 2018, the Perspective Authors.
-//
-// This file is part of the Perspective library, distributed under the terms
-// of the Apache License 2.0.  The full license can be found in the LICENSE
-// file.
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-use crate::utils::WeakScope;
-use crate::*;
-
-use derivative::Derivative;
 use std::cell::Cell;
 use std::marker::PhantomData;
 use std::rc::Rc;
-use yew::{prelude::*, virtual_dom::VChild};
 
-#[derive(Default, Clone, PartialEq)]
+use derivative::Derivative;
+use yew::html::*;
+use yew::prelude::*;
+use yew::virtual_dom::VChild;
+
+use crate::utils::WeakScope;
+
+#[derive(Clone, Default, Eq, PartialEq)]
 pub struct ModalOrientation(Rc<Cell<bool>>);
+
+impl ImplicitClone for ModalOrientation {}
 
 impl From<ModalOrientation> for bool {
     fn from(x: ModalOrientation) -> Self {
@@ -45,13 +53,14 @@ where
     }
 }
 
+#[derive(Debug)]
 pub enum ModalMsg<T>
 where
     T: Component,
 {
     SetPos {
-        top: i32,
-        left: i32,
+        top: f64,
+        left: f64,
         visible: bool,
         rev_vert: bool,
     },
@@ -65,7 +74,6 @@ where
     T: Component,
     T::Properties: ModalLink<T>,
 {
-    #[allow(dead_code)]
     pub child: Option<VChild<T>>,
 }
 
@@ -85,10 +93,10 @@ where
     type Properties = ModalProps<T>;
 
     fn create(_ctx: &Context<Self>) -> Self {
-        Modal {
+        Self {
             css: ":host{{top:0px;left:0px;opacity:0}}".to_owned(),
             rev_vert: Default::default(),
-            _comp: PhantomData::default(),
+            _comp: PhantomData,
         }
     }
 
@@ -104,7 +112,7 @@ where
                 self.css = format!(":host{{top:{}px;left:{}px{}}}", top, left, opacity);
                 self.rev_vert.0.set(rev_vert);
                 true
-            }
+            },
             ModalMsg::SubMsg(msg) => {
                 if let Some(child) = &ctx.props().child {
                     if let Some(link) = child.props.weak_link().borrow().as_ref() {
@@ -113,7 +121,7 @@ where
                 }
 
                 false
-            }
+            },
         }
     }
 
@@ -125,15 +133,39 @@ where
             .map(Html::from)
             .unwrap_or_default();
 
-        html_template! {
-            <style>
-                { self.css.to_owned() }
-            </style>
-            <ContextProvider<ModalOrientation> context={ self.rev_vert.clone() }>
-                {
-                    child
-                }
-            </ContextProvider<ModalOrientation>>
+        html! {
+            <>
+                <style>{ self.css.to_owned() }</style>
+                <ContextProvider<ModalOrientation> context={&self.rev_vert}>
+                    <NoRender>{ child }</NoRender>
+                </ContextProvider<ModalOrientation>>
+            </>
         }
+    }
+}
+
+#[derive(Properties, Clone)]
+pub struct NoRenderProps {
+    pub children: Children,
+}
+
+impl PartialEq for NoRenderProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+pub struct NoRender {}
+
+impl Component for NoRender {
+    type Message = ();
+    type Properties = NoRenderProps;
+
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self {}
+    }
+
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        html! { { ctx.props().children.iter().collect::<Html>() } }
     }
 }

@@ -1,17 +1,14 @@
-/******************************************************************************
- *
- * Copyright (c) 2017, the Perspective Authors.
- *
- * This file is part of the Perspective library, distributed under the terms of
- * the Apache License 2.0.  The full license can be found in the LICENSE file.
- *
- */
-
-#ifndef PSP_ENABLE_WASM
-#ifndef PSP_PARALLEL_FOR
-#define PSP_PARALLEL_FOR
-#endif
-#endif
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ ██████ ██████ ██████       █      █      █      █      █ █▄  ▀███ █       ┃
+// ┃ ▄▄▄▄▄█ █▄▄▄▄▄ ▄▄▄▄▄█  ▀▀▀▀▀█▀▀▀▀▀ █ ▀▀▀▀▀█ ████████▌▐███ ███▄  ▀█ █ ▀▀▀▀▀ ┃
+// ┃ █▀▀▀▀▀ █▀▀▀▀▀ █▀██▀▀ ▄▄▄▄▄ █ ▄▄▄▄▄█ ▄▄▄▄▄█ ████████▌▐███ █████▄   █ ▄▄▄▄▄ ┃
+// ┃ █      ██████ █  ▀█▄       █ ██████      █      ███▌▐███ ███████▄ █       ┃
+// ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+// ┃ Copyright (c) 2017, the Perspective Authors.                              ┃
+// ┃ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ┃
+// ┃ This file is part of the Perspective library, distributed under the terms ┃
+// ┃ of the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #if !defined(__linux__) && !defined(__APPLE__) && !defined(WIN32)
 // default to linux
@@ -32,9 +29,9 @@
 #define PSP_TABLE_VERIFY
 #define PSP_GNODE_VERIFY
 #define PSP_TABLE_TRACE
-//#define PSP_DEBUG_HELPER
-//#define PSP_MPROTECT
-//#define PSP_DBG_MALLOC
+// #define PSP_DEBUG_HELPER
+// #define PSP_MPROTECT
+// #define PSP_DBG_MALLOC
 #endif
 
 // Remove once we are c++11 everywhere
@@ -59,12 +56,12 @@
 #endif
 
 #ifdef PSP_ENABLE_PYTHON
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-namespace py = pybind11;
+// #include <pybind11/pybind11.h>
+// #include <pybind11/numpy.h>
+// namespace py = pybind11;
 
 // Define object serialization type
-#define PSP_OBJECT_TYPE PyObject*
+#define PSP_OBJECT_TYPE std::uint64_t
 
 #else
 // TODO javascript
